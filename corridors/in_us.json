@@ -1,0 +1,22 @@
+{
+  "corridor_id": "IN-US",
+  "version": "2026.10.16-r1",
+  "description": "India to United States, university tuition. Swap this file for in_gb.json to change destination; the India rule pack is the same for both.",
+  "origin_country": "IN",
+  "destination_country": "US",
+  "currency": "USD",
+  "rule_pack": "india-lrs-tcs",
+  "purpose": {
+    "value": "S0305",
+    "description": "Remittance towards education (fees, hostel expenses etc.)",
+    "status": "unverified",
+    "source": "Common bank A2 forms",
+    "check_against": "RBI purpose codes for reporting FEMA transactions"
+  },
+  "student_visa_document": {
+    "value": "Form I-20 (Certificate of Eligibility for F-1 student status)",
+    "status": "unverified",
+    "source": "General knowledge of the US student visa process",
+    "check_against": "US Department of State / Study in the States"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "type": "plan",
+  "contract_version": "1.0",
+  "plan_id": "PLAN-SYN-0001",
+  "created_at": "2026-10-16T17:00:00+05:30",
+  "goal": "Pay INV-SYN-0001 tuition via the cheapest verified route",
+  "steps": [
+    {
+      "n": 1,
+      "action": "Read invoice",
+      "tool": "read_invoice",
+      "tier": "T0",
+      "inputs": {
+        "invoice_id": "INV-SYN-0001"
+      }
+    },
+    {
+      "n": 2,
+      "action": "Check payee in registry",
+      "tool": "check_payee",
+      "tier": "T0",
+      "inputs": {
+        "registry_id": "PAYEE-US-0007"
+      }
+    },
+    {
+      "n": 3,
+      "action": "Compute TCS, LRS headroom and compare routes",
+      "tool": "compare_routes",
+      "tier": "T1",
+      "inputs": {
+        "foreign_amount": "20000.00"
+      }
+    },
+    {
+      "n": 4,
+      "action": "Pay in sandbox bank via Provider B",
+      "tool": "sandbox_pay",
+      "tier": "T3",
+      "inputs": {
+        "quote_id": "Q-SYN-0001",
+        "amount": "20000.00",
+        "currency": "USD"
+      }
+    }
+  ],
+  "max_tier": "T3",
+  "plan_hash": "sha256:b454e68498786b27a27c67cc512d3b10db58bfe09b85bfeb62bf78d6d9b7f50f"
+}

@@ -1,0 +1,25 @@
+{
+  "type": "invoice",
+  "contract_version": "1.0",
+  "invoice_id": "INV-SYN-0001",
+  "issued_on": "2026-10-01",
+  "due_on": "2026-11-15",
+  "payee": {
+    "name": "Northbridge University (synthetic)",
+    "registry_id": "PAYEE-US-0007",
+    "country": "US",
+    "bank": {
+      "account_masked": "XXXX-XXXX-4821",
+      "swift": "SYNTUS33"
+    }
+  },
+  "student": {
+    "name": "Asha Student (synthetic)",
+    "student_id": "NBU-2026-1142"
+  },
+  "amount": {
+    "value": "20000.00",
+    "currency": "USD"
+  },
+  "purpose": "education"
+}

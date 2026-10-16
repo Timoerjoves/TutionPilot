@@ -1,0 +1,14 @@
+{
+  "type": "approval",
+  "contract_version": "1.0",
+  "approval_id": "APR-SYN-0001",
+  "plan_id": "PLAN-SYN-0001",
+  "plan_hash": "sha256:b454e68498786b27a27c67cc512d3b10db58bfe09b85bfeb62bf78d6d9b7f50f",
+  "tier": "T3",
+  "approver": {
+    "role": "parent"
+  },
+  "decision": "approved",
+  "method": "pin",
+  "decided_at": "2026-10-16T17:05:00+05:30"
+}

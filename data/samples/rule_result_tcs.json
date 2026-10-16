@@ -1,0 +1,48 @@
+{
+  "type": "rule_result",
+  "contract_version": "1.0",
+  "kind": "tcs",
+  "pack_id": "india-lrs-tcs",
+  "pack_version": "2026.10.16-r1",
+  "inputs": {
+    "amount_inr": "1500000",
+    "funding": "self",
+    "prior_lrs_inr": "0",
+    "has_pan": true
+  },
+  "outputs": {
+    "tcs_inr": "10000",
+    "taxable_base_inr": "500000",
+    "rate": "0.02",
+    "cumulative_after_inr": "1500000"
+  },
+  "trace": [
+    {
+      "rule_id": "tcs_threshold_inr",
+      "pack_version": "2026.10.16-r1",
+      "value": "1000000",
+      "effective_from": "2025-04-01",
+      "status": "secondary-source",
+      "source": "https://www.business-standard.com/amp/budget/news/tcs-on-foreign-remittances-up-to-rs-10-lakh-none-on-foreign-education-loan-125020100857_1.html"
+    },
+    {
+      "rule_id": "tcs_base_excludes_fees",
+      "pack_version": "2026.10.16-r1",
+      "value": "True",
+      "effective_from": null,
+      "status": "unverified",
+      "source": "Assumption"
+    },
+    {
+      "rule_id": "tcs_rate_education_self_funded",
+      "pack_version": "2026.10.16-r1",
+      "value": "0.02",
+      "effective_from": "2026-04-01",
+      "status": "secondary-source",
+      "source": "https://pay.flywire.com/resources/tcs-on-foreign-education-payments-reduced-to-2-from-april-1-2026-what-indian-students-need-to-know"
+    }
+  ],
+  "needs_verification": [
+    "tcs_base_excludes_fees"
+  ]
+}
