@@ -37,7 +37,7 @@ def allowed_numbers(results):
         elif isinstance(v, (str, int, Decimal)) and not isinstance(v, bool):
             n = _num(v)
             if n is not None and n.is_finite():
-                amounts.add(n.quantize(Decimal("0.01")))
+                amounts.add(abs(n).quantize(Decimal("0.01")))  # text states size, sign is in the words ("costs more")
                 if 0 <= n <= 1:
                     rates.add((n * 100).normalize())
     for r in results:
@@ -57,7 +57,7 @@ def check(text, results):
         n = _num(raw)
         if n is None:
             continue
-        n = (n * UNITS.get(unit, 1)).quantize(Decimal("0.01"))
+        n = abs(n * UNITS.get(unit, 1)).quantize(Decimal("0.01"))
         if n not in amounts:
             bad.append(m.group(0).strip())
     for m in PERCENT.finditer(text):

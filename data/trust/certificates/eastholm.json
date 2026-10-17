@@ -1,0 +1,22 @@
+{
+  "certificate": {
+    "type": "payee_certificate",
+    "serial": "CERT-GB-0003-2026",
+    "issuer": "ed25519:1a0060439813ce7a",
+    "subject": {
+      "payee_id": "PAYEE-GB-0003",
+      "name": "Eastholm University (synthetic)",
+      "country": "GB",
+      "currency": "GBP",
+      "bank": {
+        "account_masked": "XXXX-XXXX-3307",
+        "swift": "SYNTGB22"
+      }
+    },
+    "public_key": "PFs6dalX5b8C89MpEQkhPDL+a3ukF/Q2v64cF7aT4ZE=",
+    "key_id": "ed25519:56c42be0f70794a5",
+    "valid_from": "2026-09-01",
+    "valid_to": "2027-08-31"
+  },
+  "signature": "rshmfOR7P4Gg3x7vPiw6hBrGf5nlNVYqQtehrS8AJ3CYgZ76DJ2S+eJHfhRA5N9Sf9iIHrFT5AMuFT2phOSaAw=="
+}

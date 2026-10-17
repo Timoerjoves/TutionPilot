@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Unit, contract, attack, app and scenario tests
+        run: python -m unittest discover -s tests -t . -v
+      - name: 25 scenarios
+        run: python -m scenarios.runner --out /tmp/evidence
+      - name: Scripted demo run and audit-chain verify
+        run: |
+          python -m app.demo_run
+          python -m app.audit verify data/evidence/demo/audit_log.jsonl

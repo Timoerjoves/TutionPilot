@@ -128,6 +128,7 @@ class TcsResult:
     cumulative_after_inr: Decimal
     trace: list
     needs_verification: list
+    warnings: list = field(default_factory=list)  # gaps the rule pack does not cover; shown to the user
 
 
 def check_effective(pack, rule_ids, on):
@@ -170,7 +171,11 @@ def compute_tcs(pack, amount_inr, funding="self", prior_lrs_inr=0, has_pan=True,
     check_effective(pack, used, on)
     rate = pack.value(rate_id)
     trace = [pack.trace(r) for r in used]
-    return TcsResult(rupee(taxable * rate), taxable, rate, funding, cumulative_after, trace, _flags(trace))
+    warnings = []
+    if funding == "loan" and not has_pan:
+        warnings.append("No PAN with a loan-funded payment: the rule pack has no rule for this case, so the "
+                        "loan rate is shown. Verify with the bank before relying on it.")
+    return TcsResult(rupee(taxable * rate), taxable, rate, funding, cumulative_after, trace, _flags(trace), warnings)
 
 
 # ---------- Landed cost and route comparison ----------

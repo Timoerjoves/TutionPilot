@@ -1,9 +1,8 @@
 {
   "type": "invoice",
-  "contract_version": "1.0",
+  "contract_version": "1.1",
   "invoice_id": "INV-SYN-0001",
   "issued_on": "2026-10-01",
-  "due_on": "2026-11-15",
   "payee": {
     "name": "Northbridge University (synthetic)",
     "registry_id": "PAYEE-US-0007",
@@ -21,5 +20,33 @@
     "value": "20000.00",
     "currency": "USD"
   },
-  "purpose": "education"
+  "purpose": "education",
+  "description": "Tuition fee, Spring 2027",
+  "due_on": "2026-11-15",
+  "attestation": {
+    "alg": "Ed25519",
+    "certificate": {
+      "certificate": {
+        "type": "payee_certificate",
+        "serial": "CERT-US-0007-2026",
+        "issuer": "ed25519:1a0060439813ce7a",
+        "subject": {
+          "payee_id": "PAYEE-US-0007",
+          "name": "Northbridge University (synthetic)",
+          "country": "US",
+          "currency": "USD",
+          "bank": {
+            "account_masked": "XXXX-XXXX-4821",
+            "swift": "SYNTUS33"
+          }
+        },
+        "public_key": "jcIyXhGiz/j9xDPjMmBkMipqcD/GJActNi+/JICdAiM=",
+        "key_id": "ed25519:14593217fddf73e9",
+        "valid_from": "2026-09-01",
+        "valid_to": "2027-08-31"
+      },
+      "signature": "ZQAehb7bY5UalbpcgujyG80Pxzmn+6OzSdIRJSG5dR6uJ6+EMiwbc4kLQ7N5iI4QrAxx/matqU9ShJy+JXsvAg=="
+    },
+    "signature": "zS8eTiQtOK9T3zJmwHRuSsZdawzfOZfSgq+MbPTl7ySSCTY36c00Q4sMiNejcsKh66qf+4AmMDsFMVyCEpF3AA=="
+  }
 }

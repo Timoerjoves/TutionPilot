@@ -3,6 +3,9 @@ import copy
 import json
 from pathlib import Path
 
+from security import ed25519
+from security.pki import b64e, demo_secret, sign_approval
+
 SAMPLES = Path(__file__).resolve().parent.parent / "data" / "samples"
 
 # Synthetic identifiers in valid formats, so the masking layer has something real-looking to catch.
@@ -11,7 +14,7 @@ SYN_PASSPORT = "Z1234567"
 SYN_AADHAAR = "2345 6789 0123"
 SYN_ACCOUNT = "123456789012345"
 
-# Stand-in for Nishanth's payee registry: one verified university, same as data/samples/invoice.json.
+# The certified payee details of one university (as in its certificate), for unit tests of payee_mismatch().
 REGISTRY = {
     "PAYEE-US-0007": {
         "registry_id": "PAYEE-US-0007",
@@ -59,3 +62,18 @@ def tampered_invoice():
     inv = invoice()
     inv["payee"]["bank"] = {"account_masked": "XXXX-XXXX-9911", "swift": "NEWBUS44"}
     return inv
+
+
+# The parent's device, simulated: in the app this key is made and kept in the parent's browser.
+PARENT_SECRET = demo_secret("parent-device")
+PARENT_PUBLIC = b64e(ed25519.public_key(PARENT_SECRET))
+
+
+def parent_approval(plan, secret=PARENT_SECRET, **changes):
+    """What the parent's device sends: an approval of this exact plan, signed with the device key."""
+    approval = {"type": "approval", "contract_version": "1.1", "approval_id": "APR-" + plan["plan_hash"][7:19].upper(),
+                "plan_id": plan["plan_id"], "plan_hash": plan["plan_hash"], "tier": plan["max_tier"],
+                "approver": {"role": "parent"}, "decision": "approved", "method": "pin",
+                "decided_at": "2026-10-17T10:00:00+05:30"}
+    approval.update(changes)
+    return sign_approval(secret, approval)

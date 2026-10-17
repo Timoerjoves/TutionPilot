@@ -1,0 +1,22 @@
+{
+  "certificate": {
+    "type": "payee_certificate",
+    "serial": "CERT-US-0007-2026",
+    "issuer": "ed25519:1a0060439813ce7a",
+    "subject": {
+      "payee_id": "PAYEE-US-0007",
+      "name": "Northbridge University (synthetic)",
+      "country": "US",
+      "currency": "USD",
+      "bank": {
+        "account_masked": "XXXX-XXXX-4821",
+        "swift": "SYNTUS33"
+      }
+    },
+    "public_key": "jcIyXhGiz/j9xDPjMmBkMipqcD/GJActNi+/JICdAiM=",
+    "key_id": "ed25519:14593217fddf73e9",
+    "valid_from": "2026-09-01",
+    "valid_to": "2027-08-31"
+  },
+  "signature": "ZQAehb7bY5UalbpcgujyG80Pxzmn+6OzSdIRJSG5dR6uJ6+EMiwbc4kLQ7N5iI4QrAxx/matqU9ShJy+JXsvAg=="
+}

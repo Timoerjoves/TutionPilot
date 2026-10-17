@@ -4,6 +4,12 @@ __pycache__/
 .env
 *.log
 !data/evidence/*.log
+!data/evidence/demo/*.log
 # never commit real documents
 private/
 *.passport.*
+# local server runs (curated evidence lives in data/evidence/demo/)
+data/evidence/runs/
+
+# Claude Code local tooling
+.claude/

@@ -1,6 +1,6 @@
 {
   "type": "rule_result",
-  "contract_version": "1.0",
+  "contract_version": "1.1",
   "kind": "tcs",
   "pack_id": "india-lrs-tcs",
   "pack_version": "2026.10.16-r1",

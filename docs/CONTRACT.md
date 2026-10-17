@@ -1,4 +1,10 @@
-# Interface contract v1.0
+# Interface contract v1.1
+
+**What changed from 1.0 (17 Oct 2026):** two optional signature fields.
+- `invoice.attestation`: the university's signature and its certificate.
+- `approval.signature`: the parent's device signature.
+
+Signed messages carry `"contract_version": "1.1"`. `validate()` still accepts 1.0 messages, so nothing that worked before breaks. The policy engine now *requires* a parent signature for T3 payments. See "Signatures" below.
 
 The agreed shape of every message passed between the rules engine (Chandan) and the app/agent (Nishanth).
 Code: `contract/__init__.py`. Examples: `data/samples/`. Tests: `tests/test_contract.py`.
@@ -8,7 +14,7 @@ Change a field only after both of you agree, then bump `CONTRACT_VERSION`.
 
 | Rule | Why |
 |---|---|
-| Has `"type"` and `"contract_version": "1.0"` | So code knows what it got |
+| Has `"type"` and `"contract_version": "1.1"` (1.0 still accepted) | So code knows what it got |
 | Money is a decimal **string**: `"1500000.00"` | Floats lose paise |
 | Dates `"2026-10-16"`; timestamps `"2026-10-16T17:00:00+05:30"` | One format everywhere |
 | Synthetic data only; bank accounts are masked | Competition rule and privacy |
@@ -27,6 +33,7 @@ Change a field only after both of you agree, then bump `CONTRACT_VERSION`.
 ### invoice — see `data/samples/invoice.json`
 `invoice_id`, `issued_on`, `due_on`, `payee {name, registry_id, country, bank {account_masked, swift}}`,
 `student {name, student_id}`, `amount {value, currency}`, `purpose` = `"education"`.
+Optional (1.1): `attestation {alg: "Ed25519", certificate {certificate, signature}, signature}`. This is the university's signature over the invoice, plus the root-signed certificate of its key and bank details.
 
 ### quote — see `data/samples/quote.json`
 `quote_id`, `route_name`, `provider`, `foreign_amount {value, currency}`, `fx_rate` (INR per 1 unit),
@@ -46,8 +53,32 @@ Built by `contract.tcs_result()`, `lrs_result()`, `landed_cost_result()` from en
 ### approval — see `data/samples/approval.json`
 `approval_id`, `plan_id`, `plan_hash`, `tier`, `approver {role}` (`parent` | `student`),
 `decision` (`approved` | `rejected`), `method` (`pin` | `click`), `decided_at`.
+Optional (1.1): `signature {alg: "Ed25519", key_id, value}`, made on the parent's device.
 - The sandbox pays only if `approval.plan_hash == plan_hash(current plan)`. Edit the plan → approval is void.
-- T3 (payment) needs `method: "pin"`. T4 is never approvable.
+- T3 (payment) needs `method: "pin"` **and** a valid `signature` from a parent key registered with the PIN. T4 is never approvable.
+
+## Signatures (1.1)
+
+**The rule.** A signature always covers the message **without its own signature field**, as `contract.canonical_json()`: sorted keys, no spaces, UTF-8. `contract.signed_bytes(msg)` returns exactly those bytes. The algorithm is Ed25519 (RFC 8032), and keys and signatures are base64.
+
+**Parts:**
+
+| Part | Who holds the private key | Where |
+|---|---|---|
+| Trust root | The (synthetic) payee trust: certifies universities and their bank accounts | Public key in `data/trust/root.json` |
+| Payee certificate | Signed by the root: `{type: "payee_certificate", serial, issuer, subject {payee_id, name, country, currency, bank}, public_key, key_id, valid_from, valid_to}` | `invoice.attestation.certificate` |
+| Revocation list | Signed by the root | `data/trust/revoked.json` |
+| Invoice signature | The university | `invoice.attestation.signature` |
+| Approval signature | The parent's device (browser WebCrypto key, never sent anywhere) | `approval.signature` |
+
+**An invoice is verified only when all of these hold:**
+- the certificate is signed by the root, in date, and not revoked;
+- the invoice signature verifies with the certificate's key;
+- the payee and bank details on the invoice equal the certificate's subject.
+
+The agent then pays the **signed** data, never the printed text.
+
+**Text format.** Signed invoices travel as text with the signed invoice embedded between `-----BEGIN TUITIONPILOT SIGNED INVOICE-----` and `-----END TUITIONPILOT SIGNED INVOICE-----` (base64 JSON). See `security/pki.py: embed(), split()`.
 
 ## Permission tiers
 
@@ -56,5 +87,5 @@ Built by `contract.tcs_result()`, `lrs_result()`, `landed_cost_result()` from en
 | T0 | Read (invoice, registry, history) | None |
 | T1 | Compute and draft | None |
 | T2 | Save or share drafts | Click |
-| T3 | Sandbox payment to a verified payee | PIN, bound to plan hash |
+| T3 | Sandbox payment to a verified (certificate-signed) payee | PIN + parent device signature, bound to plan hash |
 | T4 | New/unverified payee, raise or change limits, skip approval | Never |

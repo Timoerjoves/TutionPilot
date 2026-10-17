@@ -76,8 +76,9 @@ class Masker:
 class ModelSawLog:
     """Append-only JSON-lines log of everything sent to the model, after masking."""
 
-    def __init__(self, path):
-        self.path = Path(path)
+    def __init__(self, path=None):
+        self.path = Path(path) if path else None  # None: keep entries in memory only
+        self.entries = []
 
     def record(self, purpose, masked_text):
         leaks = find_identifiers(masked_text)
@@ -90,9 +91,11 @@ class ModelSawLog:
             "sha256": hashlib.sha256(masked_text.encode("utf-8")).hexdigest(),
             "text": masked_text,
         }
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        self.entries.append(entry)
+        if self.path:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         return entry
 
 

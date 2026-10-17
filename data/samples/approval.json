@@ -1,14 +1,19 @@
 {
   "type": "approval",
-  "contract_version": "1.0",
+  "contract_version": "1.1",
   "approval_id": "APR-SYN-0001",
   "plan_id": "PLAN-SYN-0001",
-  "plan_hash": "sha256:b454e68498786b27a27c67cc512d3b10db58bfe09b85bfeb62bf78d6d9b7f50f",
+  "plan_hash": "sha256:97f304e2a2ca72be3d810f5062ac2ee2a80d1b79f35c75096c5ddd4034a4c097",
   "tier": "T3",
   "approver": {
     "role": "parent"
   },
   "decision": "approved",
   "method": "pin",
-  "decided_at": "2026-10-16T17:05:00+05:30"
+  "decided_at": "2026-10-16T17:05:00+05:30",
+  "signature": {
+    "alg": "Ed25519",
+    "key_id": "ed25519:ec3f93a719b3843a",
+    "value": "J04c9E8vMIQJ2NvubjeBCXwCINLe+bjUy6wuSHoK3MDsD8qCgxbljJXUiPFrzD2fzGk6DKbHqvakD2yYhmZ4Ag=="
+  }
 }

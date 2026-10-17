@@ -1,0 +1,29 @@
+<section id="evidence" data-transition="fade" style="background:#14213D;color:#F7F5EF;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:32px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:64px;font-weight:600;line-height:1.1;color:#F7F5EF">Evidence: 27 scenarios, one command</h2>
+<div style="display:flex;gap:20px">
+<div style="flex:1;background:#1F2F52;border-radius:16px;padding:20px 28px"><p style="font-family:'Source Serif 4', Georgia, serif;font-size:80px;font-weight:600;line-height:1.1;color:#8FBCF0">27 / 27</p><p style="font-size:26px;color:#F7F5EF">scenarios pass</p></div>
+<div style="flex:1;background:#1F2F52;border-radius:16px;padding:20px 28px"><p style="font-family:'Source Serif 4', Georgia, serif;font-size:80px;font-weight:600;line-height:1.1;color:#F7F5EF">156</p><p style="font-size:26px;color:#F7F5EF">tests pass</p></div>
+<div style="flex:1;background:#1F2F52;border-radius:16px;padding:20px 28px"><p style="font-family:'Source Serif 4', Georgia, serif;font-size:80px;font-weight:600;line-height:1.1;color:#F2C38B">16 / 16</p><p style="font-size:26px;color:#F7F5EF">attacks stopped in the lab</p></div>
+<div style="flex:1;background:#1F2F52;border-radius:16px;padding:20px 28px"><p style="font-family:'Source Serif 4', Georgia, serif;font-size:80px;font-weight:600;line-height:1.1;color:#F7F5EF">108</p><p style="font-size:26px;color:#F7F5EF">audit entries, chain verifies</p></div>
+</div>
+<div style="display:flex;gap:24px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px">
+<h3 style="font-size:30px;font-weight:600;color:#F7F5EF">Scenarios by group</h3>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #3A4A6E;padding:0 0 8px"><p style="font-size:26px">A Task completion</p><p style="font-size:26px;color:#8FBCF0">10 / 10 pass</p></div>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #3A4A6E;padding:0 0 8px"><p style="font-size:26px">B Safe execution</p><p style="font-size:26px;color:#8FBCF0">6 / 6 pass</p></div>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #3A4A6E;padding:0 0 8px"><p style="font-size:26px">C Attacks, incl. forged approval, revoked key</p><p style="font-size:26px;color:#8FBCF0">9 / 9 pass</p></div>
+<div style="display:flex;justify-content:space-between;border-bottom:1px solid #3A4A6E;padding:0 0 8px"><p style="font-size:26px">D Privacy</p><p style="font-size:26px;color:#8FBCF0">2 / 2 pass</p></div>
+</div>
+<div style="flex:1;background:#1F2F52;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:30px;font-weight:600;color:#F7F5EF">Finance audit: 400 random cases</h3>
+<p style="font-size:24px;line-height:1.4;color:#C9D3E6">The engine matched an independent formula in every case. The audit found 3 agent bugs, now fixed with tests:</p>
+<ul style="font-size:24px;line-height:1.4;color:#F7F5EF">
+<li>An earlier in-app payment was not counted</li>
+<li>Inconsistent USD answers were accepted</li>
+<li>No PAN + loan applied 0% silently; now a warning</li>
+</ul>
+</div>
+</div>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#A9B6CF">python -m scenarios.runner · python -m app.demo_run → data/evidence/demo/ · run 17 Oct 2026 · 7 / 8</p>
+<aside>About 1 minute. One command, python -m scenarios.runner, runs 27 scenarios: the 25 from our team sheet plus two signature attacks. All 27 pass: ten task-completion, six safe-execution, nine attacks and two privacy. The two new attacks are C8, an approval forged without the parent's device or edited after signing, and C9, an invoice signed with a revoked university key. 156 tests pass. In the app's Attack lab, all 16 attacks are stopped, and the lab shows which defence stopped each one. Our scripted sandbox run writes the ledger, the audit log and the log of what the model saw; the audit log has 108 entries and its hash chain verifies. We also ran a finance audit: 400 random cases checked the engine against an independent formula, and the engine passed every one. The audit did find three bugs in the agent, all fixed with tests: a payment made earlier inside TuitionPilot was not counted toward the yearly total, rupee answers with missing or inconsistent dollar amounts were accepted, and a no-PAN plus loan case used 0 percent silently. That case is now flagged as a warning. Rerun these numbers just before we submit.</aside>
+</section>

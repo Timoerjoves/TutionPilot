@@ -1,0 +1,31 @@
+<section id="routes" data-transition="fade" style="background:#EDEAE0;color:#1F2A44;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:64px;font-weight:600;line-height:1.1;color:#14213D">Route comparison: why Provider B wins</h2>
+<div style="display:flex;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:20px">
+<table style="font-size:28px;color:#1F2A44">
+<tr style="background:#DDD8CA"><th style="width:40%;text-align:left">USD 20,000</th><th style="width:30%;text-align:right">Provider A</th><th style="width:30%;text-align:right">Provider B</th></tr>
+<tr style="background:#FFFDF8"><td>Rate (INR per USD)</td><td style="text-align:right">90.50</td><td style="text-align:right">90.20</td></tr>
+<tr style="background:#FFFDF8"><td>Amount sent</td><td style="text-align:right">18,10,000</td><td style="text-align:right">18,04,000</td></tr>
+<tr style="background:#FFFDF8"><td>Provider fee</td><td style="text-align:right">1,500</td><td style="text-align:right">3,000</td></tr>
+<tr style="background:#FFFDF8"><td>TCS at 2%</td><td style="text-align:right">16,200</td><td style="text-align:right">16,080</td></tr>
+<tr style="background:#FFFDF8"><td><b>Total (Rs)</b></td><td style="text-align:right">18,27,700</td><td style="text-align:right;color:#1F5FA8"><b>18,23,080 cheapest</b></td></tr>
+</table>
+<p style="font-size:24px;color:#5A6378">Provider A has the lower fee, but B is Rs 4,620 cheaper overall.</p>
+<p style="font-size:24px;line-height:1.4;color:#5A6378">In the app, the Best route screen shows this as a cost-on-top chart, with what-if sliders and an LRS limit gauge.</p>
+</div>
+<div style="flex:1;background:#FFFDF8;border-radius:16px;padding:32px;display:flex;flex-direction:column;gap:14px">
+<h3 style="font-size:30px;font-weight:600;color:#14213D">The “why”, line by line</h3>
+<div style="display:flex;justify-content:space-between"><p style="font-size:28px">Exchange rate: B saves</p><p style="font-size:28px;font-variant-numeric:tabular-nums;color:#1F5FA8">+ Rs 6,000</p></div>
+<div style="display:flex;justify-content:space-between"><p style="font-size:28px">Provider fee: B costs more</p><p style="font-size:28px;font-variant-numeric:tabular-nums;color:#B4561F">− Rs 1,500</p></div>
+<div style="display:flex;justify-content:space-between"><p style="font-size:28px">TCS: B saves</p><p style="font-size:28px;font-variant-numeric:tabular-nums;color:#1F5FA8">+ Rs 120</p></div>
+<div style="display:flex;justify-content:space-between;border-top:2px solid #14213D;padding:10px 0 0"><p style="font-size:28px;font-weight:700">Saving with B</p><p style="font-size:28px;font-weight:700;font-variant-numeric:tabular-nums">Rs 4,620</p></div>
+<p style="font-size:24px;line-height:1.4;color:#5A6378">Code writes every line, and the lines add up exactly to the saving. Each line lists the rules it used and which are unverified.</p>
+</div>
+</div>
+<div style="background:#14213D;border-radius:16px;padding:28px 36px;display:flex;gap:32px;align-items:center">
+<p style="font-size:24px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#F2C38B;white-space:nowrap">Hidden markup</p>
+<p style="font-size:28px;line-height:1.4;color:#F7F5EF">Against a mid-market rate of 90.00, Provider A’s 0.50 gap × USD 20,000 = <b>Rs 10,000 (0.56%)</b> built into the rate, never shown as a fee. Provider B’s gap: Rs 4,000.</p>
+</div>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#6B7280">Engine output, scenario A8 · mid-market 90.00 is an example value from the tests · no GST or correspondent charges in this example · 5 / 8</p>
+<aside>About 1 minute 15. Two routes for the same USD 20,000. Provider A has the lower fee, 1,500 rupees against 3,000, so most people would pick A. But B wins: 18,23,080 rupees against 18,27,700, which is 4,620 rupees cheaper. The why breakdown shows exactly where that comes from: B's better exchange rate saves 6,000 rupees, A's fee is 1,500 lower, and because less is remitted through B, TCS is 120 rupees less. 6,000 minus 1,500 plus 120 is 4,620. The code writes these sentences, not the model, and they always add up. The bottom line is the hidden markup: compared to a mid-market rate of 90.00, Provider A's rate hides 10,000 rupees of cost that never appears as a fee. The 90.00 mid-market rate is an example value from our tests, not a live rate. In the app this is the Best route screen: a chart of what each route costs on top of the real exchange value, what-if sliders that change the tax live, and a gauge for the yearly LRS limit.</aside>
+</section>

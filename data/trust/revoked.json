@@ -1,0 +1,10 @@
+{
+  "list": {
+    "issuer": "ed25519:1a0060439813ce7a",
+    "updated_on": "2026-10-01",
+    "revoked_serials": [
+      "CERT-US-0007-2025"
+    ]
+  },
+  "signature": "kCnS3jpiVXwLyBFOCrfCmqqpCWAR/5qEShp0LpzW9UK05CEnFSIM0//6b0CCkgsNiIzsu14zbG9S7VZHczSTBQ=="
+}

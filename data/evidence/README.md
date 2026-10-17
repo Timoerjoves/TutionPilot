@@ -4,15 +4,14 @@ Official deliverable: "simulated-account / sandbox operation logs" plus results.
 
 | File | What | Made by |
 |---|---|---|
-| `scenario_results.md` | The 25 scripted scenarios with expected vs actual result | `python -m scenarios.runner` |
-| `scenario_results.json` | Same results, machine-readable | `python -m scenarios.runner` |
-| `sandbox_ledger.log` | Sandbox bank operations (to come) | Nishanth's sandbox bank |
-| `audit_log.jsonl` + verify output | Hash-chained audit log and its verify result (to come) | Nishanth's audit log |
-| `model_saw.log` | What the model saw, after masking (to come from a demo run) | `security.ModelSawLog` |
+| `scenario_results.md` / `.json` | The 25 scripted scenarios with expected vs actual result | `python -m scenarios.runner` |
+| `demo/demo_run.md` | Summary of a scripted run: payments, attacks, breaker | `python -m app.demo_run` |
+| `demo/sandbox_ledger.log` | Every sandbox bank transfer (JSON lines) | sandbox bank |
+| `demo/audit_log.jsonl` | Hash-chained audit log of every step and policy decision | audit log |
+| `demo/model_saw.log` | Exactly what the model saw, after masking | `security.ModelSawLog` |
 
-To regenerate the scenario results from the repo root:
+Check the audit chain yourself:
 
-    python -m scenarios.runner
+    python -m app.audit verify data/evidence/demo/audit_log.jsonl
 
-PENDING rows need parts not built yet and are never counted as passes. Rerun the runner after each
-of those parts lands, then commit the new results.
+Logs from interactive server runs go to `data/evidence/runs/` and are not committed.

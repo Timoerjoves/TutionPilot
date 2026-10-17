@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TuitionPilot</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234f46e5'/%3E%3Cpath d='M9 19l7-8 7 8' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M9 19l7-8 7 8"/></svg></div>
+      <div><div class="brand-name">TuitionPilot</div><div class="brand-sub">Pay tuition abroad, safely</div></div>
+    </div>
+    <div class="pill-note" title="Synthetic data only. Payments run in a simulated bank. Not tax advice. Not RBI-approved.">
+      <span class="dot-live"></span> Sandbox demo · synthetic data · not tax advice
+    </div>
+    <div class="top-actions">
+      <span id="device-chip" class="chip-status"></span>
+      <div class="seg" role="group" aria-label="View as">
+        <button class="seg-btn" data-role="parent">Parent</button>
+        <button class="seg-btn" data-role="student">Student</button>
+      </div>
+      <button class="icon-btn" id="open-settings" aria-label="Settings and safety">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" aria-label="Steps">
+      <ol class="steps" id="steps"></ol>
+      <button class="lab-link" id="nav-lab"><span class="lab-ico">🛡</span><span><b>Attack lab</b><small>Try to break it</small></span></button>
+    </nav>
+
+    <main class="stage" id="stage" tabindex="-1"></main>
+
+    <aside class="live" aria-label="Live agent panel">
+      <div class="live-head">
+        <div class="row"><span class="pulse"></span><h2>Agent, live</h2></div>
+        <div class="tabs-mini" role="tablist">
+          <button data-side="live">Steps</button><button data-side="rules">Rules</button>
+          <button data-side="model">AI saw</button><button data-side="audit">Audit</button>
+        </div>
+      </div>
+      <div id="side" class="live-body"></div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    <span>2026 Shenzhen FinTechathon · Topic C · Synthetic data only, sandbox bank only, not tax advice, not RBI-approved.</span>
+    <button class="link" id="delete-data">Delete my data</button>
+  </footer>
+
+  <div class="drawer" id="settings" hidden>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="row between"><h2 id="settings-title">Settings &amp; safety</h2><button class="icon-btn" id="close-settings" aria-label="Close">✕</button></div>
+      <p class="muted small">Limits change only here, with the parent's PIN, never from chat.</p>
+      <div id="settings-body"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal" hidden><div class="modal-card" role="dialog" aria-modal="true" id="modal-card"></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

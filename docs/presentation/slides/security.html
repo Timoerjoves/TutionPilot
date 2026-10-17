@@ -1,0 +1,44 @@
+<section id="security" data-transition="fade" style="background:#F7F5EF;color:#1F2A44;font-family:'IBM Plex Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:32px">
+<h2 style="font-family:'Source Serif 4', Georgia, serif;font-size:60px;font-weight:600;line-height:1.1;color:#14213D">Security: signatures instead of lists</h2>
+<p style="font-size:24px;font-weight:600;background:#F2C38B;color:#14213D;padding:8px 20px;border-radius:999px;white-space:nowrap">Nishanth to review</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:24px;color:#1F5FA8"><b>University invoice.</b> A changed bank account breaks the signature.</p>
+<div style="display:flex;gap:12px;align-items:center">
+<div style="flex:1;align-self:stretch;background:#1F5FA8;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#F7F5EF">Trust root</h3><p style="font-size:24px;line-height:1.3;color:#DCE7F5">One key we trust</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#1F5FA8;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#F7F5EF">Certificate</h3><p style="font-size:24px;line-height:1.3;color:#DCE7F5">University + bank, not revoked</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#1F5FA8;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#F7F5EF">Invoice signature</h3><p style="font-size:24px;line-height:1.3;color:#DCE7F5">Made by the university</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#1F5FA8;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#F7F5EF">Bank details</h3><p style="font-size:24px;line-height:1.3;color:#DCE7F5">Match the certificate</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#1F5FA8;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#F7F5EF">Printed text</h3><p style="font-size:24px;line-height:1.3;color:#DCE7F5">Matches the signed data</p></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<p style="font-size:24px;color:#B4561F"><b>Parent approval.</b> The agent never holds the parent’s key, so it can’t forge an approval or change the plan.</p>
+<div style="display:flex;gap:12px;align-items:center">
+<div style="flex:1;align-self:stretch;background:#FFFDF8;border:2px solid #B4561F;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#14213D">Device key</h3><p style="font-size:24px;line-height:1.3;color:#3A4560">Made in the browser, can’t be exported</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#FFFDF8;border:2px solid #B4561F;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#14213D">Register</h3><p style="font-size:24px;line-height:1.3;color:#3A4560">Public key only, with the PIN</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#FFFDF8;border:2px solid #B4561F;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#14213D">Recompute</h3><p style="font-size:24px;line-height:1.3;color:#3A4560">Browser re-derives the plan hash</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#FFFDF8;border:2px solid #B4561F;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#14213D">Sign</h3><p style="font-size:24px;line-height:1.3;color:#3A4560">The approval for that exact plan</p></div>
+<x-shape kind="arrow-right" style="width:36px;height:20px;background:#8A93A6"></x-shape>
+<div style="flex:1;align-self:stretch;background:#FFFDF8;border:2px solid #B4561F;border-radius:12px;padding:18px 20px"><h3 style="font-size:28px;font-weight:600;line-height:1.2;color:#14213D">Verify</h3><p style="font-size:24px;line-height:1.3;color:#3A4560">Policy checks it before any payment</p></div>
+</div>
+</div>
+<div style="display:flex;gap:12px">
+<div style="flex:1;background:#EDEAE0;border-radius:12px;padding:14px 18px"><p style="font-size:24px;line-height:1.35"><b>T0</b> Read, check signatures · none</p></div>
+<div style="flex:1;background:#EDEAE0;border-radius:12px;padding:14px 18px"><p style="font-size:24px;line-height:1.35"><b>T1</b> Compute, draft · none</p></div>
+<div style="flex:1;background:#EDEAE0;border-radius:12px;padding:14px 18px"><p style="font-size:24px;line-height:1.35"><b>T2</b> Save, share drafts · click</p></div>
+<div style="flex:1.3;background:#14213D;border-radius:12px;padding:14px 18px"><p style="font-size:24px;line-height:1.35;color:#F7F5EF"><b>T3</b> Sandbox payment · PIN + device signature</p></div>
+<div style="flex:1.3;background:#EDEAE0;border-radius:12px;padding:14px 18px"><p style="font-size:24px;line-height:1.35"><b>T4</b> New payee, change limits, skip approval · never</p></div>
+</div>
+<p style="font-size:24px;line-height:1.4;color:#5A6378">Ed25519 in plain Python following RFC 8032, nothing to install, checked against the RFC test vectors and a browser-made signature. The model has no payment tool.</p>
+<p style="position:absolute;left:128px;right:128px;bottom:64px;font-size:24px;color:#6B7280">Source: docs/TECHNICAL.md 4.6 · docs/SECURITY_SELF_ASSESSMENT.md · docs/CONTRACT.md v1.1 · 6 / 8</p>
+<aside>About 1 minute 15. Nishanth: please check this slide before we submit. Security is 30 percent of the score. We replaced the hand-kept list of payees with digital signatures. Top row, the university invoice. TuitionPilot trusts one root key. The root signs a certificate for each university that names its bank account and SWIFT, and there is a signed list of revoked certificates. The university signs each invoice with its own key. The agent checks every link: the certificate is signed by the root and not revoked, the invoice signature is valid, the bank details equal the certificate, and the printed text matches the signed data. So if someone changes the bank account on the invoice, the signature breaks. Bottom row, the parent's approval. The parent's browser makes its own key, which cannot be exported; only the public half is registered, together with the PIN. To approve, the browser recomputes the plan hash itself and signs the approval for that exact plan. The policy engine checks that signature before any payment. The agent never has the parent's key, so it cannot forge an approval or change the plan afterwards. The tiers are the same as before, and tier 3 now needs the PIN and the device signature. Tier 4 is never allowed. The signature code is plain Python following the RFC, with nothing to install, and it is checked against the RFC's test vectors and a signature made by the browser. And the model still has no payment tool at all.</aside>
+</section>

@@ -1,0 +1,6 @@
+{
+  "name": "Sandbox Education Payee Trust (synthetic)",
+  "key_id": "ed25519:1a0060439813ce7a",
+  "public_key": "LeWuRvcN2v9pDHq2HMheyq1XKuE7bmRkHfR8glfEMC8=",
+  "note": "The only key TuitionPilot trusts. It certifies universities and their bank accounts. Synthetic."
+}

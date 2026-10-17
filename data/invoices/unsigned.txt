@@ -1,0 +1,13 @@
+NORTHBRIDGE UNIVERSITY (SYNTHETIC) - Student Accounts Office
+Payee: Northbridge University (synthetic)
+Invoice No: INV-SYN-0008
+Issue date: 2026-10-01
+Due date: 2026-11-15
+Student: Asha Student (synthetic)
+Student ID: NBU-2026-1142
+Description: Tuition fee, Spring 2027
+Amount due: USD 20,000.00
+Payee registry ID: PAYEE-US-0007
+Country: US
+Bank account: XXXX-XXXX-4821
+SWIFT: SYNTUS33

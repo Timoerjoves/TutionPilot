@@ -1,6 +1,6 @@
 # TuitionPilot: technical documentation
 
-Draft v0.1, 16 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
+Draft v0.3, 17 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
@@ -26,7 +26,7 @@ even those words are checked (see 4.3).
  Student / parent
        |  invoice + answers
        v
- [1 Intake] -> [2 Mask] -> [3 Extract (model)] -> [4 Validate + payee registry]
+ [1 Intake] -> [2 Mask] -> [3 Extract (model)] -> [4 Verify university signature]
                                                          |
                        [5 Rules: LRS, TCS, landed cost] <-+
                                      |
@@ -36,7 +36,7 @@ even those words are checked (see 4.3).
                                      |
                        [8 Policy gate: tier, caps, emergency stop]
                                      |
-                       [9 Approve: parent PIN, bound to plan hash]
+                       [9 Approve: parent device signs plan hash]
                                      |
                        [10 Execute in sandbox bank] -> [11 Receipt + audit log] -> [12 Timeline]
 ```
@@ -44,14 +44,21 @@ even those words are checked (see 4.3).
 | Stage | Module | Owner | Status |
 |---|---|---|---|
 | 2 Mask | `security/masking.py` | Chandan | Built |
-| 4 Payee check | `security/guard.py: payee_mismatch()` (registry itself: Nishanth) | Both | Check built; registry planned |
+| 1 Intake, consent | `app/static/` UI, `agent/agent.py` | Nishanth | Built |
+| 3 Extract | `agent/model.py` (offline deterministic adapter; a hosted model can plug in) | Nishanth | Built |
+| 4 Payee check | `security/pki.py` (trust root → certificate → signed invoice), `security/ed25519.py` | Both | Built |
 | 5 Rules | `rules/engine.py`, `rulepack/india_lrs_tcs.json` | Chandan | Built |
 | 6 Compare + explain | `rules/engine.py: compare_routes()`, `rules/explain.py` | Chandan | Built |
 | Form | `forms/a2.py`, `corridors/*.json` | Chandan | Built |
 | Untrusted-text scan | `security/guard.py: scan()` | Chandan | Built |
 | Grounding check | `security/grounding.py` | Chandan | Built |
 | Messages between parts | `contract/__init__.py`, `docs/CONTRACT.md` | Both | Built |
-| 1, 3, 7-12 | `agent/`, `app/` | Nishanth | Planned |
+| 7 Plan, questions, escalation | `agent/agent.py` | Nishanth | Built |
+| 8 Policy gate | `app/policy.py` (tiers, PIN, cap, emergency stop, circuit breaker) | Nishanth | Built |
+| 9 Approve | `agent/agent.py: approve()`: PIN + parent device signature over the plan hash | Both | Built |
+| 10 Execute | `app/sandbox.py` (quotes, ledger, idempotent payments) | Nishanth | Built |
+| 11 Record | `app/audit.py` (hash chain, verify command), decision receipt | Nishanth | Built |
+| 12 Track | Timeline in the UI | Nishanth | Built |
 
 Parts talk only through the five contract messages (`invoice`, `quote`, `rule_result`, `plan`, `approval`).
 Every message is checked with `contract.validate()` before it is used. Money travels as a decimal string, never a float.
@@ -128,7 +135,7 @@ It always says it is a draft and not an official bank form.
 The draft has three possible outcomes:
 - **Ready:** all required fields are present.
 - **Needs information:** a required field is missing. It becomes a question (for example the due date in scenario A9, or the PAN in A6), and the draft never guesses.
-- **Blocked:** the payee details do not match the registry, or the currency does not match the corridor.
+- **Blocked:** the invoice's signature chain fails, or the currency does not match the corridor.
 
 The missing-documents checklist is taken from the corridor. For example, the visa document is the I-20 for the USA and the CAS for the UK, and the loan letter is only asked for when the payment is loan-funded.
 
@@ -144,10 +151,10 @@ The full self-assessment and known-risk list are in [SECURITY_SELF_ASSESSMENT.md
 ### 4.1 Permission tiers
 | Tier | Allowed | Approval |
 |---|---|---|
-| T0 | Read (invoice, registry, history) | None |
+| T0 | Read (invoice, signatures, history) | None |
 | T1 | Compute and draft | None |
 | T2 | Save or share drafts | Click |
-| T3 | Sandbox payment to a verified payee | PIN, bound to plan hash |
+| T3 | Sandbox payment to a signature-verified payee | PIN + parent device signature over the plan hash |
 | T4 | New/unverified payee, raise or change limits, skip approval | Never |
 
 ### 4.2 Masking and the "what the model saw" log
@@ -174,16 +181,48 @@ Each one must match a number in the `rule_result` messages the model was given. 
 
 It first undoes common disguises: Unicode tricks, zero-width characters and spaced-out letters.
 
-**`payee_mismatch()`** compares the invoice payee and bank details with the verified registry. A changed account or SWIFT code blocks the draft.
+**Signed invoices (4.6)** replace any list of payees. `payee_mismatch()` remains as a field-by-field comparison helper.
 
 ### 4.5 Plan-bound approval
 `contract.plan_hash()` is the SHA-256 of the plan as sorted, compact JSON. An approval names the hash of the exact plan it approved. Any edit changes the hash, which voids the approval.
+
+### 4.6 Signatures instead of lists
+
+There is no list of "good" payees. TuitionPilot trusts **one root key** (`data/trust/root.json`).
+
+**The chain of trust:**
+- **Root:** signs a **certificate** for each university. The certificate names the university, its currency, its **bank account and SWIFT**, and the university's public key.
+- **Revocation list:** root-signed (`data/trust/revoked.json`). It lists certificates that must no longer be trusted, for example after a leaked key.
+- **University:** signs each invoice with its own key. The signed invoice travels inside the invoice text (`security/pki.py: embed / split`).
+
+**`TrustStore.check_invoice()` checks every link in order:**
+1. the certificate is signed by the root, in date, and not revoked;
+2. the invoice signature verifies with the certificate's key;
+3. the payee and bank details equal the certificate's subject;
+4. the printed text matches the signed data (checked in the agent).
+
+The agent then pays the signed data, never the printed text. The bank re-checks the certificate before moving money.
+
+**Parent approvals.**
+- **Set-up:** the parent's browser creates an Ed25519 key with WebCrypto. The key cannot be exported and stays in the browser's IndexedDB. Only the public key is registered, with the PIN.
+- **Signing:** to approve, the browser recomputes the plan hash from the plan it shows, then signs the approval message (plan id, plan hash, tier, decision, method, time).
+- **Checking:** the policy engine verifies that signature against the registered parent keys before any T3 payment.
+- **Effect:** the agent never holds the parent's key, so it cannot forge an approval or change the plan after signing.
+
+**The Ed25519 code.** `security/ed25519.py` is plain Python following RFC 8032. Tests check it against:
+- the RFC's test vectors;
+- a signature made by the browser's WebCrypto;
+- many tamper cases.
+
+Keys and signatures are base64. A signature always covers `contract.signed_bytes(msg)`: the canonical JSON of the message without its own signature field.
 
 ## 5. Testing and evidence
 
 ```
 python -m unittest discover -s tests -t . -v     # unit, contract, attack and scenario tests
-python -m scenarios.runner                        # 25 scenarios -> data/evidence/scenario_results.md
+python -m scenarios.runner                        # 27 scenarios -> data/evidence/scenario_results.md
+python -m app.demo_run                            # scripted run -> data/evidence/demo/ logs
+python -m app.server                              # the app at http://127.0.0.1:8000
 ```
 
 | Test file | Covers |
@@ -194,9 +233,53 @@ python -m scenarios.runner                        # 25 scenarios -> data/evidenc
 | `test_security.py` | Masking, model log, scanner, grounding |
 | `test_attacks.py` | 8 attack cases (injection, induced transfer, data extraction, privilege escalation) |
 | `test_forms.py` | Corridors, A2 draft, checklist, A9/A10 |
-| `test_scenarios.py` | Runner: 25 scenarios, no failures, pending never counted as pass |
+| `test_scenarios.py` | Runner: all 27 scenarios pass; pending is never counted as pass |
+| `test_finance_audit.py` | 400-case property checks: TCS against an independent formula, split payments, totals, ranking, LRS, financial year |
+| `test_signing.py` | Ed25519 (RFC 8032 vectors, browser WebCrypto signature), trust chain, revocation, signed approvals |
+| `test_app.py` | Invoice reader, signed invoices, sandbox bank, policy engine, audit log, agent flow |
+| `test_server.py` | Web server: static files, security headers, full payment over HTTP |
 
-## 6. Limits and open items
+## 6. App, agent and sandbox
+
+- **Sandbox bank** (`app/sandbox.py`): three synthetic providers quote as contract `quote` messages, valid for 30 minutes.
+  - It pays at most once per approval id, so a second click returns the first transaction.
+  - On its own, it refuses unknown or expired quotes, unverified payees and short balances.
+- **Policy engine** (`app/policy.py`): every tool call is checked.
+  - T0–T1 are allowed and T4 is always denied.
+  - T3 needs, in order: not frozen, emergency stop off, a verified payee, an amount within the per-payment cap, a valid `approval` whose `plan_hash` matches the current plan, method `pin`, role `parent`, and a tier equal to the plan's highest tier.
+  - Three denied money actions in a row freeze the agent until a parent resets it with the PIN.
+  - Settings change only with the PIN; the PIN is stored as PBKDF2-SHA256 with a random salt.
+- **Audit log** (`app/audit.py`): each entry stores the SHA-256 of the one before it.
+  - `python -m app.audit verify FILE` names the first entry that was edited, removed or moved.
+- **Agent** (`agent/agent.py`):
+  - Asks a question for every missing fact instead of guessing.
+  - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
+  - Changing the route or the plan voids the approval.
+  - The receipt records masked inputs, rules used and their versions, the approval, the plan hash, the transaction and its audit-entry hash.
+- **UI** (`app/static/`): plain HTML, CSS and JavaScript with three screens, an explain panel, a parent/student switch, consent, delete-my-data and a settings drawer.
+  - Every value is HTML-escaped.
+  - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
+
+### 6.1 Finance audit (17 Oct)
+
+`tests/test_finance_audit.py` checks the engine against an independent formula and against itself over 400 random cases:
+- TCS equals the tax on the part crossing or above the threshold;
+- paying *a* then *b* taxes exactly the same base as paying *a + b*;
+- totals are exactly the sum of their parts;
+- routes are sorted and savings are differences;
+- every day of two years falls in the right financial year.
+
+The engine passed all of these. The audit found three problems in the **agent**, now fixed with regression tests:
+1. **Earlier payment ignored.** A payment made in TuitionPilot was not counted toward the next invoice's yearly total, which under-stated TCS by up to 2% of Rs 10 lakh. A year-to-date tracker now feeds both TCS and LRS.
+2. **Inconsistent answers accepted.** Earlier remittances in rupees with no or inconsistent dollars were accepted. The agent now asks again.
+3. **Silent rate.** No PAN with a loan-funded payment applied 0% silently. The rule pack has no rule for this, so it is now flagged as a warning.
+
+Two finance questions remain open and need a source before any change:
+- GST on the **currency conversion** itself (separate from GST on the bank's fee) is not modelled.
+- The ranking includes TCS, which the family can later claim against their income tax.
+
+## 7. Limits and open items
 - Several tax rules are still secondary-source or unverified (see the rule pack and the self-assessment).
-- The agent, sandbox bank, policy engine, audit log and screens are Nishanth's and still planned. Their scenarios show as PENDING.
+- The model adapter is an offline deterministic stand-in; a hosted model is not wired in yet.
+- One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.
 - The scanner is pattern-based. It is a first line of defence; the policy engine must also refuse on its own.

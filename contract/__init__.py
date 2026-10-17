@@ -11,7 +11,8 @@ import hashlib
 import json
 from decimal import Decimal, InvalidOperation
 
-CONTRACT_VERSION = "1.0"
+CONTRACT_VERSION = "1.1"
+SUPPORTED_VERSIONS = ("1.0", "1.1")  # 1.1 adds optional signatures; 1.0 messages are still accepted
 
 TIERS = ("T0", "T1", "T2", "T3", "T4")
 
@@ -51,6 +52,16 @@ SPECS = {
         "decided_at": str,
     },
 }
+
+
+# Optional fields (1.1): checked only when present. A signature always covers the message WITHOUT its own
+# signature field, as canonical_json(). See docs/CONTRACT.md "Signatures".
+OPTIONAL = {
+    "invoice": {"attestation": {"alg": ("Ed25519",), "certificate": {"certificate": dict, "signature": str},
+                                "signature": str}},
+    "approval": {"signature": {"alg": ("Ed25519",), "key_id": str, "value": str}},
+}
+SIGNATURE_FIELD = {"invoice": "attestation", "approval": "signature"}
 
 
 class ContractError(ValueError):
@@ -111,9 +122,12 @@ def validate(msg):
     kind = msg.get("type") if isinstance(msg, dict) else None
     if kind not in SPECS:
         raise ContractError(f"unknown or missing type: {kind!r}")
-    if msg.get("contract_version") != CONTRACT_VERSION:
-        errors.append(f"contract_version: expected {CONTRACT_VERSION}")
+    if msg.get("contract_version") not in SUPPORTED_VERSIONS:
+        errors.append(f"contract_version: expected one of {SUPPORTED_VERSIONS}")
     _check(msg, SPECS[kind], kind, errors)
+    for key, spec in OPTIONAL.get(kind, {}).items():
+        if key in msg:
+            _check(msg[key], spec, f"{kind}.{key}", errors)
     if kind == "plan" and not errors:
         if msg["plan_hash"] != plan_hash(msg):
             errors.append("plan.plan_hash: does not match plan contents")
@@ -127,6 +141,12 @@ def validate(msg):
 def canonical_json(obj):
     """One exact byte form for hashing: sorted keys, no spaces, UTF-8."""
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+def signed_bytes(msg):
+    """The exact bytes a signature on this message covers: the message without its signature field."""
+    field = SIGNATURE_FIELD.get(msg.get("type"))
+    return canonical_json({k: v for k, v in msg.items() if k != field})
 
 
 def plan_hash(plan):

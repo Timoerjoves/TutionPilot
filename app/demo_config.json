@@ -1,0 +1,8 @@
+{
+  "note": "Demo settings for the sandbox only. Synthetic. The PIN is a demo value for judges to try; it protects nothing real.",
+  "demo_pin": "2468",
+  "per_payment_cap_usd": "50000",
+  "breaker_threshold": 3,
+  "host": "127.0.0.1",
+  "port": 8000
+}
