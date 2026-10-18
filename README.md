@@ -110,6 +110,7 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 - **Application code:** Python standard library only, with no third-party packages. Python is under the PSF License. The browser code uses only built-in Web Crypto (Ed25519, X25519, AES-GCM, HKDF); no JavaScript libraries.
 - **Optional hosted model:** the `anthropic` Python SDK (MIT licence) is used only if you set `TUITIONPILOT_MODEL=claude`; the app never needs it.
 - **Sample PDFs only:** `data/invoices/make_invoices.py` uses ReportLab (BSD licence) to generate the synthetic PDF invoices. The app does not need it.
+- **Web fonts:** the app serves Fraunces and Manrope from `app/static/fonts/` (both SIL Open Font License 1.1; licence texts alongside). No fonts are loaded from other sites.
 - **Deck only:** the slides use the Source Serif 4 and IBM Plex Sans fonts (SIL Open Font License) from Google Fonts.
 - **CI:** the GitHub Actions workflow uses `actions/checkout` and `actions/setup-python` (both MIT). They run only on GitHub and are not part of the app.
 - **Ed25519** in `security/ed25519.py` is our own implementation of the algorithm published in RFC 8032 (IETF Trust; code components of RFCs are under the Simplified BSD License).

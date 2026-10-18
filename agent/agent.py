@@ -444,9 +444,30 @@ class Agent:
         return s
 
     def _reply(self, s, t):
-        if s["ranked"] is None:
+        has = lambda *ws: any(w in t for w in ws)
+        inv, trust = s["invoice"], s["trust"]
+        if has("next", "what now", "what should", "do now"):
+            n = self.next_action(s)
+            self._say(s, "agent", f"{n['action']}. {n['why']}", tone="info")
+        elif inv and has("due", "deadline"):
+            self._say(s, "agent", f"Invoice {inv.get('invoice_id') or ''} is due on {inv['due_on']}." if inv.get("due_on")
+                      else "The invoice has no due date; I'll ask rather than guess.", tone="info")
+        elif trust and has("signature", "signed", "verified", "genuine", "fraud", "safe", "trust"):
+            self._say(s, "agent", "The university's signature checks out: root, certificate and invoice all match, so the bank "
+                      "details are the ones the university signed." if trust["verified"] else
+                      f"Not verified: {trust.get('reason') or 'the signature chain failed'}. I will not pay this payee (T4: never).",
+                      tone="ok" if trust["verified"] else "deny")
+        elif s["ranked"] is None:
             self._say(s, "agent", "Upload an invoice first; then I can compare routes and explain every rupee.")
-        elif any(w in t for w in ("why", "cheap", "explain", "compare", "route")):
+        elif s["draft"] and has("document", "paper", "a2", "form", "checklist"):
+            miss = s["draft"]["missing_documents"]
+            self._say(s, "agent", ("Still missing: " + "; ".join(miss) + ". Typical list; confirm with your bank.") if miss
+                      else "All listed documents are marked as ready. Typical list; confirm with your bank.", tone="info")
+        elif has("markup", "hidden", "fx", "exchange"):
+            r = next((r for r in s["ranked"] if r["quote"]["quote_id"] == s["chosen_quote_id"]), s["ranked"][0])
+            self._say(s, "agent", r["markup"]["text"] if r.get("markup") else f"{r['route']} shows no markup over the mid-market rate.",
+                      tone="info")
+        elif has("why", "cheap", "explain", "compare", "route"):
             self._say(s, "agent", s["explanation"]["shown"], tone="info")
         elif "tcs" in t or "tax" in t:
             best = s["ranked"][0]
@@ -457,8 +478,8 @@ class Agent:
             self._say(s, "agent", f"Your LRS headroom before this payment is about USD {D(l['headroom_before_usd']):,.0f}, "
                       f"and after it USD {D(l['headroom_after_usd']):,.0f}.", tone="info")
         else:
-            self._say(s, "agent", "I can explain the costs (ask 'why'), TCS ('tax') or your yearly limit ('limit'). "
-                      "When you're ready, the parent can review the plan and approve it with the PIN.")
+            self._say(s, "agent", "I can explain the costs ('why'), hidden markup, TCS ('tax'), your yearly limit ('limit'), "
+                      "the documents, the due date or what happens next. A parent approves the plan with the PIN.")
 
     # ---------- stage 5-7: rules, compare, plan ----------
     def _advance(self, s, ask=True):

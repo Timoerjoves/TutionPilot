@@ -374,6 +374,16 @@ class TestAgentFlow(unittest.TestCase):
         self.assertEqual(last["tone"], "deny")
         self.assertIn("Denied (T4)", last["text"])
 
+    def test_assistant_answers_from_session_state(self):
+        self.complete()
+        s = self.a.get(self.sid)
+        ask = lambda q: (self.a.chat(self.sid, q), s["chat"][-1])[1]
+        self.assertIn(s["invoice"]["due_on"], ask("When is it due?")["text"])
+        self.assertEqual(ask("Is the signature genuine?")["tone"], "ok")
+        self.assertIn(self.a.next_action(s)["action"], ask("What next?")["text"])
+        self.assertTrue(ask("Which documents do I need?")["text"].startswith(("Still missing", "All listed")))
+        self.assertIn("mid-market", ask("Is there a hidden markup?")["text"])
+
 
 if __name__ == "__main__":
     unittest.main()

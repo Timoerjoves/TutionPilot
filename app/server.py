@@ -20,7 +20,8 @@ from app import lab
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 64 * 1024
 MAX_VAULT_BODY = 4 * 1024 * 1024  # a sealed file or PDF invoice of up to 2 MB, base64-encoded
-PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html"}
+mimetypes.add_type("font/woff2", ".woff2")  # not in every platform's table
+PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html", "/assistant": "index.html"}
 LOCK = threading.Lock()
 SESSION_ACTIONS = {
     "consent": lambda a, sid, b: a.consent(sid, b.get("accept")),

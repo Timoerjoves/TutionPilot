@@ -5,6 +5,7 @@
 
 let role = store.get("tp.role", "parent") === "student" ? "student" : "parent";
 let device = null, enrolled = false, supported = true, busy = false, bootstrap = false;
+const KEY_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg>`;
 const codeKey = () => "tp.enrol." + role;  // the pending enrolment code survives a reload
 
 function toast(msg, bad = false) {
@@ -33,7 +34,7 @@ function render() {
   if (!supported) {
     body = `<div class="banner warn"><b>This browser can't make device keys.</b><span class="body">Use a current Chrome, Edge, Firefox or Safari.${info("Sign-in needs Ed25519 and X25519 in the browser's built-in Web Crypto. Nothing is installed.")}</span></div>`;
   } else if (enrolled) {
-    body = `<div class="key-card"><span class="key-ico" aria-hidden="true">🔑</span><div><b>${role === "parent" ? "Parent" : "Student"} key on this browser</b>
+    body = `<div class="key-card"><span class="key-ico" aria-hidden="true">${KEY_ICON}</span><div><b>${role === "parent" ? "Parent" : "Student"} key on this browser</b>
         <div class="mono faint">${esc(device.keyId)}</div></div></div>
       <button class="btn primary big wide" data-do="signin" ${busy ? "disabled" : ""}>${busy ? "Signing…" : "Sign in with this device"}</button>
       <p class="faint tiny center">Signs a one-time challenge${info("The server sends a random challenge that works once and expires in two minutes. Your browser signs it with its private key; the server checks the signature with the public key it stored when this device was enrolled.")}</p>`;
@@ -57,7 +58,7 @@ function render() {
       </form>`;
   } else {
     body = `<p class="muted small">On a signed-in parent device open <b>Settings → Approve a new device</b> and enter this code (valid 10 minutes):</p>
-      <div class="key-card"><span class="key-ico" aria-hidden="true">🔑</span><div><b class="mono" style="font-size:22px">${esc(showCode(store.get(codeKey())))}</b>
+      <div class="key-card"><span class="key-ico" aria-hidden="true">${KEY_ICON}</span><div><b class="mono" style="font-size:22px">${esc(showCode(store.get(codeKey())))}</b>
         <div class="mono faint">${esc(device ? device.keyId : "")}</div></div></div>
       <form id="enrol" class="stack" autocomplete="off">
         <label class="field-in"><span>Parent PIN</span><input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" required></label>

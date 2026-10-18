@@ -4,36 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TuitionPilot</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233563c9'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='700' fill='white' text-anchor='middle'%3Etp%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230b0b0c'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%233be38a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <header class="top">
     <div class="brand"><a class="wordmark" href="/" aria-label="TuitionPilot home">tuition<b>pilot</b></a></div>
-    <div class="pill-note"><span class="dot-live"></span> Sandbox demo
-      <button type="button" class="i-btn" data-tip="Synthetic data only. Payments run in a simulated bank; no real money moves. Not tax advice. Not RBI-approved." aria-label="About this demo">i</button>
-    </div>
+    <nav class="top-nav" aria-label="Pages">
+      <button data-page="pay" data-nav="pay">Payment</button>
+      <button data-page="assistant" data-nav="assistant">Assistant</button>
+      <button data-page="vault" data-nav="vault">Vault</button>
+      <button data-page="lab" data-nav="lab">Attack lab</button>
+    </nav>
     <div class="top-actions">
+      <span class="pill-note"><span class="dot-live"></span> Sandbox
+        <button type="button" class="i-btn" data-tip="Synthetic data only. Payments run in a simulated bank; no real money moves. Not tax advice. Not RBI-approved." aria-label="About this demo">i</button></span>
       <span id="device-chip" class="chip-status"></span>
       <button class="btn sm" data-act="sign-out">Sign out</button>
       <button class="icon-btn" id="open-settings" aria-label="Settings and safety">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.8 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
+    <nav class="stepbar" aria-label="Payment steps"><ol class="steps" id="steps"></ol></nav>
   </header>
 
   <div class="shell">
-    <nav class="rail" aria-label="Steps">
-      <ol class="steps" id="steps"></ol>
-      <button class="lab-link" id="nav-vault"><span class="lab-ico">🔒</span><span><b>Family vault</b><small>Encrypted documents</small></span></button>
-      <button class="lab-link" id="nav-lab" style="margin-top:10px"><span class="lab-ico">🛡</span><span><b>Attack lab</b><small>Try to break it</small></span></button>
-    </nav>
-
     <main class="stage" id="stage" tabindex="-1"></main>
 
     <aside class="live" aria-label="Live agent panel">
       <div class="live-head">
-        <div class="row"><span class="pulse"></span><h2>Agent, live</h2></div>
+        <div class="row"><span class="pulse"></span><h2>Agent, live</h2><span class="spacer"></span>
+          <button class="icon-btn" id="hide-live" aria-label="Hide the agent panel" title="Hide panel"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></div>
         <div class="tabs-mini" role="tablist">
           <button data-side="live">Steps</button><button data-side="rules">Rules</button>
           <button data-side="model">AI saw</button><button data-side="audit">Audit</button>
@@ -42,6 +43,8 @@
       <div id="side" class="live-body"></div>
     </aside>
   </div>
+
+  <button class="live-fab" id="show-live"><span class="pulse"></span> Agent, live</button>
 
   <footer class="foot">
     <span>2026 Shenzhen FinTechathon · Topic C · Synthetic data only, sandbox bank only, not tax advice, not RBI-approved.</span>
@@ -59,7 +62,7 @@
   <div class="modal" id="modal" hidden><div class="modal-card" role="dialog" aria-modal="true" id="modal-card"></div></div>
   <div class="tip" id="tip" role="tooltip" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="common.js"></script>
-  <script src="app.js"></script>
+  <script src="/common.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

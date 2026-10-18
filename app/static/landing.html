@@ -4,100 +4,237 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TuitionPilot · Pay tuition abroad</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233563c9'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='700' fill='white' text-anchor='middle'%3Etp%3C/text%3E%3C/svg%3E">
+  <meta name="description" content="An AI agent that verifies a university's invoice, finds the cheapest legal route and pays only after a parent signs. Sandbox demo.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230b0b0c'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%233be38a'/%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/Fraunces.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="site.css">
 </head>
 <body class="site">
   <header class="site-nav">
-    <a class="wordmark" href="/" aria-label="TuitionPilot home">tuition<b>pilot</b></a>
-    <nav class="site-links" aria-label="Sections">
-      <a href="#how">How it works</a><a href="#security">Security</a><a href="#family">For families</a>
-    </nav>
-    <a class="btn primary" href="/signin">Sign in</a>
+    <div class="wrap">
+      <a class="wordmark" href="/" aria-label="TuitionPilot home">tuition<b>pilot</b></a>
+      <nav class="site-links" aria-label="Sections">
+        <a href="#how">How it works</a><a href="#features">Features</a><a href="#security">Security</a><a href="#family">Families</a>
+      </nav>
+      <a class="btn primary" href="/signin">Sign in</a>
+    </div>
   </header>
 
   <main>
-    <section class="hero-site">
-      <div class="hero-copy">
-        <div class="eyebrow">Cross-border student finance</div>
-        <h1 class="display"><b>Pay tuition abroad.</b><br>Know every rupee before it moves.</h1>
-        <p class="lead">An AI agent that checks the invoice, finds the cheapest legal route and waits for a parent's signature.</p>
-        <div class="row" style="margin-top:26px">
-          <a class="btn primary big" href="/signin">Get started</a>
-          <a class="btn big ghost" href="#how">See how it works</a>
-        </div>
-        <p class="faint small" style="margin-top:18px">Sandbox demo · synthetic data · not tax advice
-          <button type="button" class="i-btn" data-tip="Built for the 2026 Shenzhen FinTechathon (Topic C). Payments run in a simulated bank; no real money moves. Not RBI-approved." aria-label="About this demo">i</button></p>
+    <!-- hero -->
+    <section class="hero">
+      <div class="rays" aria-hidden="true">
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="streak" x1="0" x2="1"><stop offset="0" stop-color="#3be38a" stop-opacity="0"/><stop offset="1" stop-color="#3be38a"/></linearGradient>
+            <linearGradient id="streak2" x1="0" x2="1"><stop offset="0" stop-color="#7c5cff" stop-opacity="0"/><stop offset="1" stop-color="#7c5cff"/></linearGradient>
+          </defs>
+          <path class="ray" d="M1000 0 C 700 300, 400 500, 0 1000"/>
+          <path class="ray" d="M1000 80 C 720 360, 420 560, 60 1000"/>
+          <path class="ray" d="M1000 160 C 740 420, 460 620, 140 1000"/>
+          <path class="ray" d="M1000 240 C 760 480, 500 680, 240 1000"/>
+          <path class="ray" d="M1000 320 C 780 540, 560 740, 360 1000"/>
+          <path class="streak" d="M1000 80 C 720 360, 420 560, 60 1000"/>
+          <path class="streak s2" d="M1000 240 C 760 480, 500 680, 240 1000"/>
+        </svg>
       </div>
-
-      <div class="hero-visual" aria-hidden="true">
-        <div class="mock mock-main">
-          <div class="row between"><span class="eyebrow">Invoice</span><span class="badge ok">✓ Signature verified</span></div>
-          <div class="mock-amount">USD 20,000</div>
-          <div class="muted small">Northbridge University · due 15 Nov</div>
-          <div class="mock-bars">
-            <div><span>Provider B</span><i style="--w:62%"></i><b>Rs 18,47,200</b></div>
-            <div><span>Provider C</span><i style="--w:78%"></i><b>Rs 18,48,529</b></div>
-            <div><span>Provider A</span><i style="--w:92%"></i><b>Rs 18,52,000</b></div>
+      <div class="glow g1" aria-hidden="true"></div><div class="glow g2" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div>
+          <div class="kicker" data-reveal>Cross-border student finance</div>
+          <h1 class="display words" style="margin-top:22px">Pay tuition abroad. <em>Know every rupee</em> before it moves.</h1>
+          <p class="lead" data-reveal style="--d:.5s">An AI agent that checks the university's signature, finds the cheapest legal route, and waits for a parent to sign.</p>
+          <div class="hero-cta" data-reveal style="--d:.65s">
+            <a class="btn primary big" href="/signin">Get started <span class="arrow">→</span></a>
+            <a class="btn big ghost" href="#how">See the 8 steps</a>
           </div>
+          <p class="hero-note" data-reveal style="--d:.8s"><span class="dot-live"></span> Sandbox demo · synthetic data · not tax advice
+            <button type="button" class="i-btn" data-tip="Built for the 2026 Shenzhen FinTechathon (Topic C). Payments run in a simulated bank; no real money moves. Not RBI-approved." aria-label="About this demo">i</button></p>
         </div>
-        <div class="mock mock-float mock-a"><span class="dot ok"></span><span><b>Parent signed</b><br><span class="muted tiny">ed25519 · this device</span></span></div>
-        <div class="mock mock-float mock-b"><span class="dot warn"></span><span><b>Hidden markup found</b><br><span class="muted tiny">Rs 4,000 inside the rate</span></span></div>
+
+        <div class="stage3d" aria-hidden="true" data-reveal style="--d:.3s">
+          <div class="paycard">
+            <div class="top-row"><span>Tuition invoice</span><span>Signed ✓</span></div>
+            <div class="chip-ic"></div>
+            <div class="amt">USD 20,000</div>
+            <div class="to">Northbridge University · due 15 Nov</div>
+            <div class="bars">
+              <div><span>Provider B</span><i style="--w:62%"></i><b>₹18,47,200</b></div>
+              <div><span>Provider C</span><i style="--w:78%"></i><b>₹18,48,529</b></div>
+              <div><span>Provider A</span><i style="--w:92%"></i><b>₹18,52,000</b></div>
+            </div>
+          </div>
+          <div class="float f1"><span class="d">✓</span><span><b>Signature chain verified</b><small>root → certificate → invoice</small></span></div>
+          <div class="float f2"><span class="d">!</span><span><b>Hidden markup found</b><small>₹4,000 inside the rate</small></span></div>
+          <div class="float f3"><span class="d">✎</span><span><b>Parent signed the plan</b><small>Ed25519 · this device</small></span></div>
+        </div>
       </div>
     </section>
 
-    <section class="band" id="how">
-      <div class="eyebrow">How it works</div>
-      <h2 class="section-title"><b>Four steps.</b> Nothing moves without you.</h2>
-      <ol class="flow">
-        <li><span class="flow-n">1</span><b>Read &amp; verify</b><span class="muted small">The university's signature is checked</span>
-          <button type="button" class="i-btn" data-tip="The agent trusts one root key. It checks the university's certificate, the revocation list and the invoice signature, and that the printed text matches what was signed." aria-label="More">i</button></li>
-        <li><span class="flow-n">2</span><b>Compute</b><span class="muted small">LRS limit, TCS and landed cost</span>
-          <button type="button" class="i-btn" data-tip="Tested code computes every number from a versioned rule pack, with a source and date for each rule. The AI only explains." aria-label="More">i</button></li>
-        <li><span class="flow-n">3</span><b>Compare</b><span class="muted small">Every route, every hidden fee</span>
-          <button type="button" class="i-btn" data-tip="Each route is measured against the mid-market rate, so markups hidden inside the exchange rate show up as rupees." aria-label="More">i</button></li>
-        <li><span class="flow-n">4</span><b>Parent signs</b><span class="muted small">PIN + device key, then sandbox pay</span>
-          <button type="button" class="i-btn" data-tip="The parent's device signs the exact plan. If anything changes after signing, even one rupee, the signature no longer matches and the payment is refused." aria-label="More">i</button></li>
-      </ol>
-    </section>
+    <!-- marquee -->
+    <div class="marquee" aria-hidden="true">
+      <div class="track">
+        <span>Signature verified</span><span style="--c:#7c5cff">LRS headroom</span><span style="--c:#ff3d8b">TCS worked out</span><span style="--c:#ffb020">Hidden markup in rupees</span><span style="--c:#22c3e6">A2 form drafted</span><span>Parent signs</span><span style="--c:#7c5cff">Sandbox only</span>
+        <span>Signature verified</span><span style="--c:#7c5cff">LRS headroom</span><span style="--c:#ff3d8b">TCS worked out</span><span style="--c:#ffb020">Hidden markup in rupees</span><span style="--c:#22c3e6">A2 form drafted</span><span>Parent signs</span><span style="--c:#7c5cff">Sandbox only</span>
+      </div>
+    </div>
 
-    <section class="band" id="security">
-      <div class="eyebrow">Security</div>
-      <h2 class="section-title"><b>Keys, not passwords.</b> Built to be attacked.</h2>
-      <div class="sec-grid">
-        <div class="sec"><b>Passwordless sign-in</b><span class="muted small">Your device proves itself with a key</span>
-          <button type="button" class="i-btn" data-tip="The server sends a one-time challenge; your browser signs it with a private key that never leaves the device. No password exists to steal or phish." aria-label="More">i</button></div>
-        <div class="sec"><b>Encrypted family vault</b><span class="muted small">The server stores only ciphertext</span>
-          <button type="button" class="i-btn" data-tip="Files are encrypted in the browser and locked to each family device's public key. Only those devices can open them; the server cannot." aria-label="More">i</button></div>
-        <div class="sec"><b>Masked AI</b><span class="muted small">PAN and accounts become tokens</span>
-          <button type="button" class="i-btn" data-tip="Identifiers are replaced with tokens before any AI sees text, and you can see exactly what it saw." aria-label="More">i</button></div>
-        <div class="sec"><b>Permission tiers</b><span class="muted small">Some actions are never allowed</span>
-          <button type="button" class="i-btn" data-tip="T0 read · T1 compute · T2 save/share with approval · T3 sandbox payment with PIN and device signature · T4 never: unverified payee, new payee, raising limits, skipping approval." aria-label="More">i</button></div>
-        <div class="sec"><b>Tamper-evident log</b><span class="muted small">Every step is hash-chained</span>
-          <button type="button" class="i-btn" data-tip="Each audit entry includes the hash of the one before, so editing any past entry breaks the chain." aria-label="More">i</button></div>
-        <div class="sec"><b>Attack lab</b><span class="muted small">Try to break it yourself</span>
-          <button type="button" class="i-btn" data-tip="Prompt injection, changed bank details, look-alike universities, revoked keys and plan tampering each run against a separate copy of the agent." aria-label="More">i</button></div>
+    <!-- statement + stats -->
+    <section class="section">
+      <div class="wrap">
+        <p class="statement" data-scrub>Tuition abroad is the biggest cheque a family writes. <span class="hl">Every rupee</span> of it should be checked, explained and signed for.</p>
+        <div class="stats" style="margin-top:110px">
+          <div class="stat"><span class="n num" data-count="239">0</span><span class="l">automated tests pass</span></div>
+          <div class="stat"><span class="n num" data-count="27">0</span><span class="l">scripted scenarios, all green</span></div>
+          <div class="stat"><span class="n num" data-count="16">0</span><span class="l">attacks stopped in the lab</span></div>
+          <div class="stat"><span class="n num" data-count="0">0</span><span class="l">rupees of real money moved</span></div>
+        </div>
       </div>
     </section>
 
-    <section class="band" id="family">
-      <div class="eyebrow">For families</div>
-      <h2 class="section-title"><b>One account per device.</b> Each with its own role.</h2>
-      <div class="grid-2 family">
-        <div class="card"><h3>Parents</h3><p class="muted small">Approve and pay. Manage limits and devices.</p>
-          <ul class="ticks"><li>Sign payment plans with the PIN</li><li>Enrol the student's device</li><li>Share documents with the student</li></ul></div>
-        <div class="card"><h3>Students</h3><p class="muted small">See everything. Pay nothing.</p>
-          <ul class="ticks"><li>Follow the payment step by step</li><li>Upload admission letters for parents</li><li>Can never approve or change limits</li></ul></div>
+    <!-- sticky 8-step story -->
+    <section class="section tight" id="how">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker" data-reveal>How it works</div>
+          <h2 class="title-xl words">Eight steps. <em>Nothing moves</em> without you.</h2>
+        </div>
+        <div class="story">
+          <div class="story-visual" aria-hidden="true">
+            <div class="story-dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div>
+              <div class="sn">01</div>
+              <div class="st">Consent</div>
+              <div class="sd">You choose what the agent may do.</div>
+            </div>
+          </div>
+          <ol class="story-steps">
+            <li data-c1="#7c5cff" data-c2="#3be38a" data-short="You choose what the agent may do."><span class="k">STEP 01</span><h3>Consent</h3>
+              <p>Pick what the agent may read and save. It can never pay a new payee, raise a limit or skip your approval.</p><span class="tag">T0 read · T4 never</span></li>
+            <li data-c1="#22c3e6" data-c2="#7c5cff" data-short="JSON, PDF or a sample. Read on this machine."><span class="k">STEP 02</span><h3>Upload invoice</h3>
+              <p>Drop the university's invoice as a PDF or JSON file. Personal numbers are masked before any AI reads it.</p><span class="tag">masked text only</span></li>
+            <li data-c1="#3be38a" data-c2="#22c3e6" data-short="Root → certificate → invoice, link by link."><span class="k">STEP 03</span><h3>Verify signature</h3>
+              <p>The university signed its bank details. Change one digit of the account and the signature breaks, so a fake "new bank details" email fails.</p><span class="tag">Ed25519 · RFC 8032</span></li>
+            <li data-c1="#ffb020" data-c2="#ff3d8b" data-short="Only what's missing, one question at a time."><span class="k">STEP 04</span><h3>Questions</h3>
+              <p>Earlier remittances this year, loan or own funds, PAN. The agent asks only what it cannot read, and never guesses.</p><span class="tag">no guessing</span></li>
+            <li data-c1="#ff3d8b" data-c2="#ffb020" data-short="Every route against the real rate."><span class="k">STEP 05</span><h3>Compare routes</h3>
+              <p>Each bank and provider is costed against the mid-market rate, so the markup hidden inside the exchange rate shows up in rupees.</p><span class="tag">T1 compute</span></li>
+            <li data-c1="#22c3e6" data-c2="#3be38a" data-short="A2-style draft and the papers the bank wants."><span class="k">STEP 06</span><h3>Documents &amp; A2 form</h3>
+              <p>A filled A2-style draft, the LRS and TCS working with a source for every rule, and a checklist of what is still missing.</p><span class="tag">T2 draft</span></li>
+            <li data-c1="#7c5cff" data-c2="#ff3d8b" data-short="PIN plus this device's key, over the exact plan."><span class="k">STEP 07</span><h3>Review &amp; sign</h3>
+              <p>A parent's device signs the exact plan. If anything changes afterwards, even one rupee, the signature no longer matches and the bank refuses.</p><span class="tag">T3 parent only</span></li>
+            <li data-c1="#3be38a" data-c2="#7c5cff" data-short="Paid once, in the sandbox, with a receipt."><span class="k">STEP 08</span><h3>Receipt</h3>
+              <p>The sandbox bank pays exactly once and returns a receipt. Every step sits in a hash-chained audit log you can verify.</p><span class="tag">audit chain</span></li>
+          </ol>
+        </div>
       </div>
-      <div class="cta card">
-        <h2 class="section-title" style="margin:0"><b>Ready when the invoice is.</b></h2>
-        <a class="btn primary big" href="/signin">Sign in</a>
+    </section>
+
+    <!-- feature tiles -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker" data-reveal>Features</div>
+          <h2 class="title-xl words">Code computes. <em>The AI explains.</em></h2>
+          <p class="lead" data-reveal>Tax, limits and cost come from tested code with a source for every rule. The AI reads the invoice and puts results into words.</p>
+        </div>
+        <div class="tiles">
+          <article class="tile wide reveal-group" style="--c1:#ffb020">
+            <div class="art art-bars" aria-hidden="true">
+              <i style="--h:60%;--c:#ffb020;--n:0"></i><i style="--h:85%;--c:#ff3d8b;--n:1"></i><i style="--h:45%;--c:#7c5cff;--n:2"></i><i style="--h:100%;--c:#ffb020;--n:3"></i><i style="--h:70%;--c:#22c3e6;--n:4"></i>
+            </div>
+            <span class="label">Hidden markup</span><h3>See the fee inside the rate.</h3><p>Every route is measured against the mid-market rate.</p>
+            <button type="button" class="i-btn" data-tip="Banks often add a margin to the exchange rate instead of charging a visible fee. TuitionPilot converts that margin into rupees so routes compare fairly." aria-label="More">i</button>
+          </article>
+          <article class="tile wide reveal-group" style="--c1:#3be38a">
+            <div class="art art-chain" aria-hidden="true"><span class="nd ok">ROOT</span><span class="ln"></span><span class="nd ok">CERT</span><span class="ln"></span><span class="nd ok">INV</span></div>
+            <span class="label">Signed invoices</span><h3>Fake bank details fail by design.</h3><p>One trust root, a certificate per university, a signature on every invoice.</p>
+            <button type="button" class="i-btn" data-tip="The agent checks the university's certificate, the revocation list and the invoice signature, and that the printed text matches what was signed." aria-label="More">i</button>
+          </article>
+          <article class="tile reveal-group" style="--c1:#7c5cff">
+            <div class="art art-pin" aria-hidden="true"><i style="--n:0"></i><i style="--n:1"></i><i style="--n:2"></i><i style="--n:3"></i></div>
+            <span class="label">Parent signs</span><h3>PIN plus device key.</h3><p>The student prepares; only a parent's device can sign.</p>
+            <button type="button" class="i-btn" data-tip="The parent's browser makes its own Ed25519 key that cannot be exported, recomputes the plan hash and signs that exact plan." aria-label="More">i</button>
+          </article>
+          <article class="tile light reveal-group" style="--c1:#22c3e6">
+            <div class="art art-lock" aria-hidden="true"><svg viewBox="0 0 100 100"><rect x="22" y="44" width="56" height="42" rx="10"/><path d="M34 44V32a16 16 0 0 1 32 0v12"/><circle cx="50" cy="64" r="5"/></svg></div>
+            <span class="label">Family vault</span><h3>Only your devices can open it.</h3><p>Files are encrypted in the browser.</p>
+            <button type="button" class="i-btn" data-tip="AES-256-GCM per file; the file key is wrapped for each family device with X25519. The server stores ciphertext only." aria-label="More">i</button>
+          </article>
+          <article class="tile reveal-group" style="--c1:#ff3d8b">
+            <div class="art art-orb" aria-hidden="true"><span class="orb big"></span></div>
+            <span class="label">Assistant</span><h3>Ask anything, get a source.</h3><p>Answers come from the engine, never guessed.</p>
+            <button type="button" class="i-btn" data-tip="The assistant answers from the rules engine and your session. Every number carries its rule id, pack version and source, and wording is checked against the engine's numbers." aria-label="More">i</button>
+          </article>
+          <article class="tile full reveal-group" style="--c1:#ff3d8b">
+            <div class="art art-shield" aria-hidden="true">
+              <span>prompt injection</span><span>changed bank details</span><span>look-alike university</span><span>revoked key</span><span>tampered plan</span><span>forged approval</span><span>raise my limit</span>
+            </div>
+            <span class="label">Attack lab</span><h3>Try to break it yourself.</h3><p>Sixteen attacks, each against its own copy of the agent. All stopped.</p>
+            <button type="button" class="i-btn" data-tip="Each attack runs against a separate copy of the agent so your own session is never touched." aria-label="More">i</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- security -->
+    <section class="section dark" id="security">
+      <div class="rays" aria-hidden="true">
+        <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
+          <path class="ray" d="M0 0 C 300 300, 600 500, 1000 1000"/><path class="ray" d="M0 120 C 280 400, 580 600, 940 1000"/>
+          <path class="ray" d="M0 240 C 260 500, 540 700, 860 1000"/><path class="streak" d="M0 120 C 280 400, 580 600, 940 1000"/>
+        </svg>
+      </div>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker" data-reveal>Security</div>
+          <h2 class="title-xl words">Keys, not passwords. <em>Built to be attacked.</em></h2>
+          <p class="lead" data-reveal>Every action has a permission tier. The top tier is never allowed, whoever asks.</p>
+        </div>
+        <div class="tiers">
+          <div class="tier-row" data-reveal style="--c:#9a9a9e"><span class="t">T0</span><span><b>Read</b><span>Open the invoice, the rule pack and your session.</span></span><span class="pill">Automatic</span></div>
+          <div class="tier-row" data-reveal style="--c:#22c3e6;--d:.05s"><span class="t">T1</span><span><b>Compute and draft</b><span>LRS headroom, TCS, landed cost, route comparison.</span></span><span class="pill">Automatic</span></div>
+          <div class="tier-row" data-reveal style="--c:#3be38a;--d:.1s"><span class="t">T2</span><span><b>Save or share</b><span>Drafts and vault files, after you say yes.</span></span><span class="pill">Your approval</span></div>
+          <div class="tier-row" data-reveal style="--c:#ffb020;--d:.15s"><span class="t">T3</span><span><b>Sandbox payment</b><span>Signature-verified payee, PIN and the parent device's signature.</span></span><span class="pill">Parent signs</span></div>
+          <div class="tier-row never" data-reveal style="--c:#ff3d8b;--d:.2s"><span class="t">T4</span><span><b>Never</b><span>Unverified or new payee, raising limits, skipping approval.</span></span><span class="pill">Refused</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- families -->
+    <section class="section" id="family">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker" data-reveal>For families</div>
+          <h2 class="title-xl words">The student prepares. <em>The parent signs.</em></h2>
+        </div>
+        <div class="family">
+          <div class="fam" data-reveal><span class="who" style="background:#0b0b0c">P</span><h3>Parents</h3><p class="muted">Approve and pay. Manage limits and devices.</p>
+            <ul class="ticks"><li>Sign payment plans with the PIN and this device</li><li>Approve the student's device</li><li>Share documents through the vault</li></ul></div>
+          <div class="fam" data-reveal style="--d:.1s"><span class="who" style="background:linear-gradient(135deg,#7c5cff,#ff3d8b)">S</span><h3>Students</h3><p class="muted">Do the work. Never pay.</p>
+            <ul class="ticks"><li>Upload the invoice and answer the questions</li><li>Tap "Ask a parent to sign"</li><li>Can never approve, pay or change limits</li></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-big">
+      <div class="ring" aria-hidden="true"></div>
+      <div class="wrap">
+        <h2 class="title-xl words">Ready when the <em>invoice is.</em></h2>
+        <a class="btn primary big" href="/signin" data-reveal>Sign in <span class="arrow">→</span></a>
       </div>
     </section>
   </main>
 
-  <footer class="foot">2026 Shenzhen FinTechathon · Topic C · Synthetic data only, sandbox bank only, not tax advice, not RBI-approved.</footer>
+  <footer class="site-foot">
+    <div class="wrap">
+      <a class="wordmark" href="/">tuition<b>pilot</b></a>
+      <span>2026 Shenzhen FinTechathon · Topic C · Synthetic data only, sandbox bank only, not tax advice, not RBI-approved.</span>
+    </div>
+  </footer>
   <div class="tip" id="tip" role="tooltip" hidden></div>
   <script src="common.js"></script>
+  <script src="site.js"></script>
 </body>
 </html>

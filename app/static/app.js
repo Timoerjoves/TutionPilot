@@ -5,7 +5,7 @@
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let V = null;                         // session view from the server
-let view = store.get("tp.view", "welcome");
+let view = location.pathname === "/assistant" ? "assistant" : store.get("tp.view", "welcome");
 let side = store.get("tp.side", "live");
 let busy = false;
 let seenSeq = Number(store.get("tp.seen", "0"));
@@ -18,13 +18,16 @@ let wf = null, wfTimer = null;
 let payProgress = null;               // steps shown while a payment runs
 
 const STEPS = [
-  { id: "welcome", title: "Welcome", sub: "How your data is used" },
-  { id: "invoice", title: "Invoice", sub: "Read and verify" },
-  { id: "questions", title: "A few questions", sub: "Asks, never guesses" },
-  { id: "route", title: "Best route", sub: "Every rupee explained" },
+  { id: "welcome", title: "Consent", sub: "How your data is used" },
+  { id: "upload", title: "Upload invoice", sub: "PDF, JSON or sample" },
+  { id: "verify", title: "Verify signature", sub: "University signed it" },
+  { id: "questions", title: "Questions", sub: "Asks, never guesses" },
+  { id: "route", title: "Compare routes", sub: "Every rupee explained" },
+  { id: "documents", title: "Documents & A2", sub: "Draft and checklist" },
   { id: "sign", title: "Review & sign", sub: "Parent approves" },
   { id: "receipt", title: "Receipt", sub: "Proof of payment" },
 ];
+const PAGES = ["lab", "vault", "assistant"];  // reachable at any time, outside the 8 steps
 const SAMPLES = {
   valid_us: ["good", "Genuine invoice", "Northbridge · USA · USD 20,000"],
   valid_uk: ["good", "Genuine invoice", "Eastholm · UK · GBP 12,000"],
@@ -132,26 +135,29 @@ function toast(msg, bad = false) {
 }
 
 /* ---------- navigation ---------- */
-function progressIndex() {
+function progressIndex() {  // the furthest step the session has reached
   if (!V.consent) return 0;
   if (!V.invoice) return 1;
-  if (V.question || !V.ranked) return 2;
-  if (V.receipt) return 5;
-  return 4;
+  if (V.question || !V.ranked) return 3;
+  if (V.receipt) return 7;
+  return 6;
 }
-function autoStep() { return ["welcome", "invoice", "questions", "route", "route", "receipt"][progressIndex()]; }
+function autoStep() { return ["welcome", "upload", "verify", "questions", "route", "route", "route", "receipt"][progressIndex()]; }
 function reachable(id) {
-  if (id === "lab" || id === "vault") return true;
-  const i = STEPS.findIndex((s) => s.id === id), p = progressIndex();
+  if (PAGES.includes(id)) return true;
   if (id === "receipt") return !!V.receipt;
-  return i <= p || (p >= 4 && i <= 4);
+  const i = STEPS.findIndex((s) => s.id === id);
+  return i >= 0 && i <= progressIndex();
 }
 function go(id, rerender = true) {
   if (!reachable(id)) return;
   view = id;
-  store.set("tp.view", id);
+  if (id !== "assistant") store.set("tp.view", id);
+  const path = id === "assistant" ? "/assistant" : "/app";  // the assistant has its own address
+  if (location.pathname !== path) history.pushState(null, "", path);
   if (rerender) { render(); $("#stage").focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 }
+addEventListener("popstate", () => { view = location.pathname === "/assistant" ? "assistant" : store.get("tp.view", "welcome"); render(); });
 
 /* ---------- render ---------- */
 function render() {
@@ -163,26 +169,41 @@ function render() {
   chip.textContent = `${V.role === "parent" ? "Parent" : "Student"} · ${V.device ? short(V.device.replace("ed25519:", ""), 8) : "not signed in"}`;
   chip.title = V.device ? `Signed in with device key ${V.device}` : "";
   renderRail();
-  const views = { welcome: vWelcome, invoice: vInvoice, questions: vQuestions, route: vRoute, sign: vSign, receipt: vReceipt, lab: vLab, vault: vVault };
+  $$("[data-nav]").forEach((a) => a.classList.toggle("on", a.dataset.nav === (PAGES.includes(view) ? view : "pay")));
+  document.body.classList.toggle("page-mode", PAGES.includes(view));
+  $(".shell").classList.toggle("solo", store.get("tp.solo") === "1");
+  const views = { welcome: vWelcome, upload: vUpload, verify: vVerify, questions: vQuestions, route: vRoute, documents: vDocuments,
+    sign: vSign, receipt: vReceipt, lab: vLab, vault: vVault, assistant: vAssistant };
   const entering = view !== render.last;  // animate only when moving to another step, not on every update
   render.last = view;
+  render.entering = entering;
   $("#stage").innerHTML = `<div class="view stack ${entering ? "enter" : ""}">${globalBanners()}${views[view]()}</div>`;
   renderSide();
   after();
 }
 
 function renderRail() {
-  const p = progressIndex();
+  const verified = !!(V.trust && V.trust.verified), signed = !!(V.approval || V.receipt);
+  const DONE = { welcome: V.consent, upload: !!V.invoice, verify: verified, questions: !!V.ranked && !V.question,
+    route: signed, documents: signed, sign: !!V.receipt, receipt: !!V.receipt };
+  const BLOCKED = { verify: !!V.trust && !verified, sign: (V.escalations || []).length > 0 };
   $("#steps").innerHTML = STEPS.map((s, i) => {
-    const done = s.id === "receipt" ? !!V.receipt : (i < p && !(s.id === "route" && p === 4)) || (s.id === "route" && !!V.approval) || (s.id === "sign" && !!V.receipt);
-    const blocked = s.id === "sign" && (V.escalations || []).length > 0;
-    return `<li class="${done ? "done" : ""} ${blocked ? "blocked" : ""}">
-      <button class="step-btn ${view === s.id ? "cur" : ""}" data-go="${s.id}" ${reachable(s.id) ? "" : "disabled"}>
+    const done = !!DONE[s.id], blocked = !!BLOCKED[s.id];
+    return `<li class="${done ? "done" : ""} ${blocked ? "blocked" : ""} ${view === s.id ? "now" : ""}">
+      <button class="step-btn" title="${esc(s.title)}: ${esc(s.sub)}" data-go="${s.id}" ${reachable(s.id) ? "" : "disabled"}>
         <span class="step-dot">${done ? "✓" : blocked ? "!" : i + 1}</span>
         <span class="step-txt"><b>${s.title}</b><small>${s.sub}</small></span></button></li>`;
   }).join("");
-  $("#nav-lab").classList.toggle("cur", view === "lab");
-  $("#nav-vault").classList.toggle("cur", view === "vault");
+  $$("[data-page]").forEach((b) => b.classList.toggle("cur", view === b.dataset.page));
+}
+
+function stepHead(id, title, lead) {  // "Step 3 of 8" header shared by the step views
+  const i = STEPS.findIndex((s) => s.id === id);
+  return `<div class="view-head"><div><div class="eyebrow">Step ${i + 1} of ${STEPS.length} · ${esc(STEPS[i].title)}</div>
+    <h1>${title}</h1>${lead ? `<p class="lead" style="margin-top:8px">${lead}</p>` : ""}</div></div>`;
+}
+function nextBtn(id, label) {
+  return `<div class="nav-row"><span></span><button class="btn primary big" data-go="${id}">${label} <span class="arrow">→</span></button></div>`;
 }
 
 function globalBanners() {
@@ -194,42 +215,57 @@ function globalBanners() {
   return h + b.map(([k, t, d]) => `<div class="banner ${k}"><b>⛔ ${esc(t)}</b><span class="body">${esc(d)}</span></div>`).join("");
 }
 
-/* ---------- 1. welcome ---------- */
+/* ---------- 1. consent ---------- */
 function vWelcome() {
   return `<section class="card hero">
-    <div class="eyebrow">Make a tuition payment</div>
-    <h1 style="margin:10px 0 8px"><b>Pay tuition abroad</b> with every rupee explained.</h1>
+    <div class="eyebrow">Step 1 of 8 · Consent</div>
+    <h1 style="margin:12px 0 10px;font-size:44px">Pay tuition abroad, <i>every rupee</i> explained.</h1>
     <p class="lead">Nothing moves until a parent signs.${info("TuitionPilot reads the fee invoice, checks it was really signed by the university, works out the yearly LRS limit, tax collected at source (TCS) and the true cost of each route, then pays only after a parent signs the exact plan.")}</p>
     <div class="promises">
-      <div class="promise"><b>Code computes${info("Every number comes from tested rules with sources. The AI only explains, and its numbers are checked.")}</b><span class="muted small">Tested rules, cited sources</span></div>
-      <div class="promise"><b>Everyone signs${info("Universities sign invoices; the parent's device signs the plan. The agent can't change either.")}</b><span class="muted small">University and parent</span></div>
-      <div class="promise"><b>Sandbox only${info("A simulated bank with synthetic data. No real money ever moves.")}</b><span class="muted small">No real money</span></div>
+      <div class="promise" style="--c:var(--v-green)"><span class="ico"></span><b>Code computes${info("Every number comes from tested rules with sources. The AI only explains, and its numbers are checked.")}</b><span class="muted small">Tested rules, cited sources</span></div>
+      <div class="promise" style="--c:var(--v-violet)"><span class="ico"></span><b>Everyone signs${info("Universities sign invoices; the parent's device signs the plan. The agent can't change either.")}</b><span class="muted small">University and parent</span></div>
+      <div class="promise" style="--c:var(--v-amber)"><span class="ico"></span><b>Sandbox only${info("A simulated bank with synthetic data. No real money ever moves.")}</b><span class="muted small">No real money</span></div>
     </div>
-    ${V.consent ? `<div class="row"><button class="btn primary big" data-go="${autoStep() === "welcome" ? "invoice" : autoStep()}">Continue →</button><span class="badge ok">Consent given</span></div>` : `
+    ${V.consent ? `<div class="row"><button class="btn primary big" data-go="${autoStep() === "welcome" ? "upload" : autoStep()}">Continue <span class="arrow">→</span></button><span class="badge ok">✓ Consent given</span></div>` : `
     <label class="toggle-row"><input type="checkbox" class="sr" id="c1"><span class="switch"></span>
       <span><b>Financial data</b>${info("Use the invoice, the sender's details and this year's earlier payments to work out limits, tax and cost.")}<br><span class="muted small">Used for limits, tax and cost</span></span></label>
     <label class="toggle-row"><input type="checkbox" class="sr" id="c2"><span class="switch"></span>
       <span><b>AI processing, masked</b>${info("PAN, passport, Aadhaar, account numbers, emails and phones become tokens before any AI sees text. You can see exactly what it saw.")}<br><span class="muted small">Identifiers hidden from the AI</span></span></label>
-    <div class="row" style="margin-top:16px"><button class="btn primary big" data-act="consent" id="consent-btn" disabled>Agree and start</button>
+    <div class="row" style="margin-top:18px"><button class="btn primary big" data-act="consent" id="consent-btn" disabled>Agree and start</button>
       <span class="muted small">You can delete your data at any time.</span></div>`}
   </section>`;
 }
 
-/* ---------- 2. invoice ---------- */
-function vInvoice() {
+/* ---------- 2. upload ---------- */
+function vUpload() {
   const gallery = (kind) => Object.entries(SAMPLES).filter(([, v]) => v[0] === kind).map(([k, [tag, t, d]]) =>
     `<button class="sample" data-sample="${k}"><span class="tag ${tag}">${tag === "good" ? "Genuine" : "Attack"}</span><b>${esc(t)}</b><small>${esc(d)}</small></button>`).join("");
-  const picker = `<section class="card">
-      <div class="row between"><h2>${V.invoice ? "Use another invoice" : "Add the university's invoice"}</h2><span class="muted small">Synthetic samples</span></div>
-      <div class="drop" id="drop" style="margin:14px 0">
-        <b>Drop an invoice file here</b> <span class="muted small">PDF, JSON or text, up to 2 MB</span>
-        <div class="muted small">or <label class="link" style="cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt,.json,application/pdf,text/plain,application/json" hidden></label>
-        · <button class="link" data-act="paste">paste text</button></div>
+  const inv = V.invoice, a = inv && inv.amount || {};
+  const current = inv ? `<section class="card"><div class="row between"><div><div class="eyebrow">Current invoice</div>
+      <h2 style="margin-top:6px">${esc((inv.payee || {}).name || "Unknown payee")} · ${a.value ? esc(money(a.value, a.currency)) : "amount missing"}</h2></div>
+      <button class="btn primary" data-go="verify">See the signature check <span class="arrow">→</span></button></div></section>` : "";
+  return `${stepHead("upload", V.invoice ? "Use another invoice" : "Add the university's <i>invoice</i>", "Read on this machine. Personal numbers are masked before any AI sees the text.")}
+    ${current}
+    <section class="card">
+      <div class="drop" id="drop">
+        <div class="drop-ico"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
+        <h2>Drop the invoice here</h2>
+        <p class="muted small">PDF, JSON or text, up to 2 MB</p>
+        <div class="row" style="justify-content:center;margin-top:16px">
+          <label class="btn primary" style="cursor:pointer">Choose a file<input type="file" id="file" accept=".pdf,.txt,.json,application/pdf,text/plain,application/json" hidden></label>
+          <button class="btn" data-act="paste">Paste text</button></div>
       </div>
-      <h3 style="margin:6px 0 10px">Genuine invoices</h3><div class="samples">${gallery("good")}</div>
-      <h3 style="margin:18px 0 10px">Attacks to try</h3><div class="samples">${gallery("bad")}</div>
+    </section>
+    <section class="card">
+      <div class="row between"><h2>Or try a sample</h2><span class="muted small">Synthetic data${info("Genuine samples are signed by a synthetic university. Attack samples show what the agent refuses: changed bank details, hidden instructions, look-alike universities, revoked or missing signatures.")}</span></div>
+      <h3 style="margin:16px 0 10px" class="eyebrow">Genuine invoices</h3><div class="samples">${gallery("good")}</div>
+      <h3 style="margin:22px 0 10px" class="eyebrow">Attacks to try</h3><div class="samples">${gallery("bad")}</div>
     </section>`;
-  if (!V.invoice) return picker;
+}
+
+/* ---------- 3. verify ---------- */
+function vVerify() {
+  if (!V.invoice) return empty("No invoice yet", "Upload an invoice first.", "upload");
   const t = V.trust || { chain: [], verified: false };
   const inv = V.invoice, p = inv.payee || {}, b = p.bank || {}, a = inv.amount || {};
   const unc = new Set(V.uncertain || []);
@@ -237,36 +273,37 @@ function vInvoice() {
   const chain = t.chain.map((c, i) => `<div class="link-node ${c.ok ? "ok" : "bad"}" style="animation-delay:${i * 260}ms">
       <span class="node">${c.ok ? "✓" : "✕"}</span><div><b>${esc(c.step)}</b><small>${esc(c.detail)}</small></div></div>`).join("");
   const flags = (V.flags || []).map((x) => `<div class="banner warn"><b>⚠ Ignored instructions</b><span class="body">Found ${esc(x.categories)} in the ${esc(x.source)}.${info("Documents can't give the agent instructions, change payees or skip approval. The text was ignored and logged.")}</span></div>`).join("");
-  return `<div class="grid-2">
-      <section class="card">
-        <div class="row between"><h2>Signature check${info("The agent trusts one root key, not a list. It checks every link: root, university certificate, revocation list, invoice signature, and that the printed text matches the signed data.")}</h2>${t.verified ? '<span class="badge ok">✓ Verified</span>' : '<span class="badge deny">✕ Not verified</span>'}</div>
-        <div class="chain" style="margin-top:14px">${chain}</div>
-        ${t.verified ? "" : `<div class="banner deny"><b>Will not pay.</b><span class="body">${esc(t.reason || "")}. Paying an unverified payee is tier T4: never allowed.</span></div>`}
+  return `${stepHead("verify", t.verified ? "Signed by the <i>university</i>." : "This invoice is <i>not verified</i>.", t.verified ? "Every link checks out, so the bank details are the ones the university signed." : "The agent will not pay it. Paying an unverified payee is tier T4: never allowed.")}
+    ${flags}
+    <div class="grid-2">
+      <section class="card hero">
+        <div class="row between"><h2>Signature chain${info("The agent trusts one root key, not a list. It checks every link: root, university certificate, revocation list, invoice signature, and that the printed text matches the signed data.")}</h2>${t.verified ? '<span class="badge ok">✓ Verified</span>' : '<span class="badge deny">✕ Not verified</span>'}</div>
+        <div class="chain" style="margin-top:18px">${chain}</div>
+        ${t.verified ? "" : `<p class="small" style="color:#ff7aa9">${esc(t.reason || "")}</p>`}
       </section>
       <section class="card">
         <div class="row between"><h2>What the agent read</h2><span class="muted small">${t.verified ? "from the signed data" : "from the printed text"}</span></div>
-        <div class="fields" style="margin-top:12px">
+        <div class="fields" style="margin-top:14px">
           ${f("payee", "Payee", p.name)}${f("invoice_id", "Invoice", inv.invoice_id)}
           ${f("amount", "Amount", a.value ? money(a.value, a.currency) : "")}${f("due_on", "Due", inv.due_on)}
           ${f("bank", "Bank account", b.account_masked)}${f("swift", "SWIFT", b.swift)}
           ${f("student", "Student", (inv.student || {}).name)}${f("country", "Country", p.country)}
         </div>
-        <div class="row" style="margin-top:18px"><button class="btn primary" data-go="${V.question ? "questions" : V.ranked ? "route" : "questions"}">Continue →</button></div>
       </section>
-    </div>${flags}${picker}`;
+    </div>
+    <div class="nav-row"><button class="btn" data-go="upload">← Use another invoice</button>
+      <button class="btn primary big" data-go="${V.ranked && !V.question ? "route" : "questions"}">${t.verified ? "Continue" : "Continue anyway"} <span class="arrow">→</span></button></div>`;
 }
 
-/* ---------- 3. questions ---------- */
+/* ---------- 4. questions ---------- */
 function vQuestions() {
   const q = V.question;
-  const chat = `<details class="more" ${q ? "" : "open"}><summary>Conversation</summary><div>
-      <div class="chatlog" id="chatlog">${V.chat.map((m) => `<div class="msg ${esc(m.who)} ${esc(m.tone || "")}">${esc(m.text)}</div>`).join("")}</div>
-      <form class="ask" id="ask" autocomplete="off"><input id="ask-in" placeholder="Ask why, about tax, or about your limit…" aria-label="Ask TuitionPilot">
-        <button class="btn">Ask</button></form></div></details>`;
+  const head = stepHead("questions", q ? "A few <i>questions</i>." : "All set, <i>no guessing</i> needed.",
+    q ? "Only what the invoice cannot tell. One at a time." : "The agent has what it needs to compare routes.");
+  const chat = `<p class="center small muted">Not sure? <button class="link" data-go="assistant">Ask the assistant</button>${info("The assistant answers from the rules engine and this session, with the rule and source behind every number.")}</p>`;
   if (!q) {
-    return `<section class="card qcard"><div style="font-size:40px">✅</div><h2>All set, no guessing needed.</h2>
-      <p class="muted">The agent has what it needs to compare routes.</p>
-      <button class="btn primary big" data-go="route" style="margin-top:12px">See the best route →</button></section>${chat}`;
+    return `${head}<section class="card qcard"><div class="check-anim"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <button class="btn primary big" data-go="route" style="margin-top:8px">Compare routes <span class="arrow">→</span></button></section>${chat}`;
   }
   const idx = QUESTION_ORDER.indexOf(q.field);
   const dots = idx >= 0 ? `<div class="qprogress">${QUESTION_ORDER.map((_, i) => `<i class="${i <= idx ? "on" : ""}"></i>`).join("")}</div>` : `<div class="qprogress"><i class="on"></i></div>`;
@@ -278,11 +315,11 @@ function vQuestions() {
         <input id="answer-in" ${q.kind === "date" ? 'type="date"' : ""} placeholder="${q.field === "pan" ? "e.g. ABCDE1234F (synthetic)" : q.kind === "number" ? "e.g. 6 lakh or 600000" : "Type your answer"}" aria-label="Answer">
         <button class="btn primary">Next</button></form>
       ${q.options ? `<div class="choices" style="margin-top:10px">${q.options.map((o) => `<button class="choice" data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}`;
-  return `<section class="card qcard">${dots}<div class="qtext">${esc(q.text)}</div>${hint}${choices}
+  return `${head}<section class="card qcard">${dots}<div class="qtext">${esc(q.text)}</div>${hint}${choices}
       <p class="faint tiny" style="margin-top:16px">${q.field === "pan" ? "Masked before the AI sees it" : "Asked, never guessed"}${info(q.field === "pan" ? "Your PAN becomes a token immediately. The AI only ever sees the token, and the draft shows it partly hidden." : "When the invoice or your situation leaves a gap, the agent asks you rather than assuming an answer.")}</p></section>${chat}`;
 }
 
-/* ---------- 4. route ---------- */
+/* ---------- 5. route ---------- */
 function vRoute() {
   if (!V.ranked) return empty("Finish the questions first", "The routes appear once the agent has everything it needs.", "questions");
   const chosen = V.ranked.find((r) => r.quote.quote_id === V.chosen_quote_id) || V.ranked[0];
@@ -311,7 +348,7 @@ function vRoute() {
     ...(V.warnings || []).map((w) => `<div class="banner warn"><b>Check</b><span class="body">${esc(w)}</span></div>`)].join("");
   const prior = V.prior_used && Number(V.prior_used.paid_here_inr) > 0
     ? `<span class="badge info">Includes ${esc(inr(V.prior_used.paid_here_inr))} you paid here this year</span>` : "";
-  return `${banners}
+  return `${stepHead("route", "The cheapest <i>legal</i> route.", "Every route costed against the mid-market rate, so hidden markup shows up in rupees.")}${banners}
     <section class="card hero">
       <div class="eyebrow">Recommended route</div>
       <div class="headline" style="margin-top:6px"><span class="big-amount num" data-count="${esc(chosen.total_inr)}">${esc(chosen.total_display)}</span>
@@ -345,7 +382,8 @@ function vRoute() {
     <details class="more"><summary>Every rupee of ${esc(chosen.route)}, with the rules used</summary><div>
       <ul class="lines">${chosen.lines.map((l) => `<li><span>${esc(l.label)} ${l.unverified.length ? `<span class="badge warn" title="${esc(l.unverified.join(", "))}">unverified rule</span>` : ""}</span>
         <b class="num">${esc(inr(l.amount_inr))}</b>${l.label !== "Total" ? `<small>${esc(l.text)}</small>` : ""}</li>`).join("")}</ul></div></details>
-    <div class="row"><button class="btn primary big" data-go="sign">Review &amp; sign →</button><span class="muted small">Not tax advice${info("Tax figures are not tax advice. Rules marked unverified still need checking against RBI and Income Tax Department sources.")}</span></div>`;
+    <div class="nav-row"><span class="muted small">Not tax advice${info("Tax figures are not tax advice. Rules marked unverified still need checking against RBI and Income Tax Department sources.")}</span>
+      <button class="btn primary big" data-go="documents">Documents &amp; A2 form <span class="arrow">→</span></button></div>`;
 }
 
 function gauge() {
@@ -355,17 +393,18 @@ function gauge() {
   const used = Math.max(0, cap - before), L = Math.PI * 80;
   const usedLen = Math.min(L, used / cap * L), thisLen = Math.max(0, Math.min(L - usedLen, amount / cap * L));
   const fits = l.within_cap;
+  const capStatus = ((l.trace || []).find((t) => /cap/i.test(t.rule_id)) || { status: "unverified" }).status;
   return `<div class="row between"><h2>Yearly LRS limit${info("The Liberalised Remittance Scheme lets each resident send up to a yearly cap abroad. All purposes count, from 1 April.")}</h2><span class="badge ${fits ? "ok" : "deny"}">${fits ? "Within limit" : "Over: stopped"}</span></div>
     <div class="gauge-wrap" style="margin-top:8px">
       <svg class="gauge" viewBox="0 0 180 104" role="img" aria-label="LRS limit used">
         <path d="M10 94 A80 80 0 0 1 170 94" fill="none" stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"/>
         <path d="M10 94 A80 80 0 0 1 170 94" fill="none" stroke="var(--t0)" stroke-width="16" stroke-dasharray="${usedLen} ${L}"/>
-        <path d="M10 94 A80 80 0 0 1 170 94" fill="none" stroke="${fits ? "var(--accent)" : "var(--deny)"}" stroke-width="16" stroke-dasharray="0 ${usedLen} ${thisLen} ${L}"/>
+        <path d="M10 94 A80 80 0 0 1 170 94" fill="none" stroke="${fits ? "var(--v-green)" : "var(--deny)"}" stroke-width="16" stroke-dasharray="0 ${usedLen} ${thisLen} ${L}"/>
         <text x="90" y="82" text-anchor="middle">${Math.round((used + amount) / cap * 100)}%</text>
         <text x="90" y="100" text-anchor="middle" class="lbl">of USD ${(cap / 1000).toFixed(0)}k used</text>
       </svg>
       <div class="small"><p><span class="badge muted">Earlier</span> ${usd(used)}</p><p><span class="badge info">This payment</span> ${usd(amount)}${l.estimated ? " (est.)" : ""}</p>
-        <p><b>Left after: ${usd(l.headroom_after_usd)}</b></p><p class="faint tiny"><span class="badge warn">unverified</span>${info("The USD 250,000 yearly LRS cap is marked unverified in the rule pack until checked against RBI sources.")}</p></div>
+        <p><b>Left after: ${usd(l.headroom_after_usd)}</b></p><p class="faint tiny"><span class="badge ${capStatus === "verified" ? "ok" : "warn"}">${esc(capStatus)}</span>${info("Status of the yearly LRS cap rule in the rule pack. See the Rules tab for its source.")}</p></div>
     </div>`;
 }
 
@@ -396,7 +435,7 @@ async function whatif() {
   } catch (e) { $("#wf-out").innerHTML = `<p class="muted small">${esc(e.message)}</p>`; }
 }
 
-/* ---------- 5. sign ---------- */
+/* ---------- 7. sign ---------- */
 function vSign() {
   if (!V.plan) return empty("No plan yet", "The plan appears once the routes are compared.", "route");
   const p = V.plan, approved = V.approval && V.approval.plan_hash === V.plan_hash_now, voided = V.approval && !approved;
@@ -430,7 +469,8 @@ function vSign() {
   else panel = `<section class="card"><div class="row between"><h2>Sign &amp; approve</h2>${tier("T3")}</div>
       <p class="muted small">${voided ? "<b>The plan changed, so sign again.</b>" : "Signs this exact plan."}${info("Your device signs the plan hash with its own key. The PIN unlocks the approval; the signature proves it came from this device.")}</p>
       ${pinPad("Sign & approve")}</section>`;
-  return `<div class="signing"><div class="stack">${plan}${draftCard()}</div><div class="stack">${panel}</div></div>`;
+  return `${stepHead("sign", approved ? "Signed. <i>Ready to pay.</i>" : "Review &amp; <i>sign</i>.", "The parent's device signs this exact plan. Change one rupee and the signature no longer matches.")}
+    <div class="signing"><div class="stack">${plan}</div><div class="stack">${panel}</div></div>`;
 }
 
 function pinPad(label) {
@@ -441,29 +481,65 @@ function pinPad(label) {
     <p class="faint tiny" style="text-align:center;margin-top:8px">Demo PIN is in the README · you can also type it</p>`;
 }
 
-function draftCard() {
+/* ---------- 6. documents & A2 ---------- */
+function vDocuments() {
   const d = V.draft;
-  if (!d) return "";
+  if (!d) return empty("No draft yet", "The A2-style draft appears once the routes are compared.", "route");
   const st = { ready: ["ok", "Ready"], needs_information: ["warn", "Needs information"], blocked: ["deny", "Blocked"] }[d.status] || ["muted", d.status];
   const s = d.sections;
-  const sec = (title, obj) => `<h4 class="eyebrow" style="margin:14px 0 6px;color:var(--muted)">${esc(title)}</h4><dl class="kv">${Object.entries(obj).map(([k, v]) =>
+  const sec = (title, obj) => `<h4 class="eyebrow" style="margin:18px 0 8px">${esc(title)}</h4><dl class="kv">${Object.entries(obj).map(([k, v]) =>
     `<dt>${esc(k.replace(/_/g, " "))}</dt><dd>${v === null || v === undefined ? '<span class="badge warn">missing</span>' : esc(v)}</dd>`).join("")}</dl>`;
-  return `<details class="more"><summary>A2-style form draft · <span class="badge ${st[0]}">${esc(st[1])}</span> · ${d.missing_documents.length} documents missing</summary><div>
-    <p class="faint tiny">${d.labels.map(esc).join(" · ")}</p>
-    ${sec("Remitter", s.remitter)}${sec("Beneficiary", s.beneficiary)}${sec("Remittance", s.remittance)}
-    ${sec("Purpose", { code: s.purpose.code + " (unverified)", description: s.purpose.description })}
-    <h4 class="eyebrow" style="margin:14px 0 6px;color:var(--muted)">Documents</h4>
-    ${d.checklist.map((c) => `<label class="toggle-row" style="padding:8px 0"><input type="checkbox" class="sr" data-doc="${esc(c.key)}" ${c.status === "have" ? "checked" : ""}><span class="switch"></span><span class="small">${esc(c.item)}</span></label>`).join("")}
-    <p class="faint tiny">Typical list; confirm with your bank. Unverified: ${esc(d.needs_verification.join(", "))}</p></div></details>`;
+  const have = d.checklist.filter((c) => c.status === "have").length, pct = d.checklist.length ? Math.round(have / d.checklist.length * 100) : 100;
+  return `${stepHead("documents", "Your <i>A2-style</i> draft.", "Filled from the invoice and your answers. Tick each paper as you gather it.")}
+    <div class="doc-grid">
+      <section class="card">
+        <div class="row between"><h2>A2-style form draft${info("A draft in the shape of the bank's A2 form for an LRS remittance. Your bank's own form is the one you sign; this saves typing and catches gaps.")}</h2><span class="badge ${st[0]}">${esc(st[1])}</span></div>
+        <p class="faint tiny" style="margin-top:6px">${d.labels.map(esc).join(" · ")}</p>
+        ${sec("Remitter", s.remitter)}${sec("Beneficiary", s.beneficiary)}${sec("Remittance", s.remittance)}
+        ${sec("Purpose", { code: s.purpose.code + " (unverified)", description: s.purpose.description })}
+      </section>
+      <div class="stack">
+        <section class="card">
+          <div class="row between"><h2>Documents</h2><span class="muted small num">${have} of ${d.checklist.length}</span></div>
+          <div class="meter"><i style="width:${pct}%"></i></div>
+          ${d.checklist.map((c) => `<label class="toggle-row" style="padding:11px 0"><input type="checkbox" class="sr" data-doc="${esc(c.key)}" ${c.status === "have" ? "checked" : ""}><span class="switch"></span><span class="small">${esc(c.item)}</span></label>`).join("")}
+          <p class="faint tiny" style="margin-top:10px">Typical list; confirm with your bank.</p>
+        </section>
+        ${d.needs_verification.length ? `<section class="card"><h3>Still to confirm${info("Rules the rule pack marks as not yet verified against a primary source. Outputs that use them say so.")}</h3>
+          <p class="small muted" style="margin-top:6px">${d.needs_verification.map(esc).join(", ")}</p></section>` : ""}
+      </div>
+    </div>
+    <div class="nav-row"><button class="btn" data-go="route">← Routes</button><button class="btn primary big" data-go="sign">Review &amp; sign <span class="arrow">→</span></button></div>`;
 }
 
-/* ---------- 6. receipt ---------- */
+/* ---------- assistant (its own page) ---------- */
+const SUGGEST = ["What should I do next?", "Why is this route cheapest?", "How much TCS will I pay?", "How much of my LRS limit is left?",
+  "Is there a hidden markup?", "Which documents do I need?", "When is the invoice due?", "Is the signature genuine?"];
+function vAssistant() {
+  const msgs = V.chat.map((m) => `<div class="msg ${esc(m.who)} ${esc(m.tone || "")}">${esc(m.text)}</div>`).join("");
+  const q = V.question;
+  return `<section class="card assistant-chat">
+      <div class="assistant-head"><span class="orb"></span><div><h1>Assistant</h1>
+        <p class="muted small" style="margin:2px 0 0">Answers from the rules engine and this session${info("The assistant never invents a number: figures come from tested code with a rule id, pack version and source. Text that tries to give it instructions is refused and logged. It sees masked text only.")}</p></div>
+        <span class="spacer"></span><button class="btn sm" data-go="${autoStep()}">Back to the payment</button></div>
+      <div class="chatlog" id="chatlog">${msgs || `<div class="empty-chat"><span class="orb big"></span><h2>Ask about <i>your</i> payment.</h2>
+        <p>Costs, tax, your yearly limit, documents or what happens next.</p></div>`}</div>
+      <div class="assistant-foot">
+        ${q ? `<div class="banner warn" style="margin-bottom:12px"><b>Question waiting</b><span class="body">${esc(q.text)} Your next message answers it.</span></div>` : ""}
+        <div class="chips">${SUGGEST.map((x) => `<button class="chip" data-say="${esc(x)}" ${q ? "disabled" : ""}>${esc(x)}</button>`).join("")}</div>
+        <form class="ask" id="ask" autocomplete="off"><input id="ask-in" placeholder="Ask anything about this payment…" aria-label="Ask TuitionPilot">
+          <button class="btn primary">Send</button></form>
+      </div>
+    </section>`;
+}
+
+/* ---------- 8. receipt ---------- */
 function vReceipt() {
   if (!V.receipt) return empty("No payment yet", "Sign and send the plan first.", "sign");
   const r = V.receipt;
   return `<section class="card receipt-hero">
       <div class="check-anim"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-      <div class="eyebrow">Paid in the sandbox</div>
+      <div class="eyebrow">Step 8 of 8 · Paid in the sandbox</div>
       <div class="big-amount num" style="margin:8px 0">${esc(inr(V.txn.debit_inr))}</div>
       <p class="muted">${esc(r.inputs_masked.amount)} to ${esc(r.inputs_masked.payee)} via ${esc(r.route)}</p>
     </section>
@@ -480,7 +556,7 @@ function vReceipt() {
       </dl>
       <p class="faint tiny" style="margin-top:12px">${r.labels.map(esc).join(" · ")}</p>
       <div class="row no-print" style="margin-top:12px"><button class="btn" data-act="print">Print</button>
-        <button class="btn" data-act="pay">Send again (test: pays once)</button><button class="btn primary" data-go="invoice">Pay another invoice</button></div>
+        <button class="btn" data-act="pay">Send again (test: pays once)</button><button class="btn primary" data-go="upload">Pay another invoice</button></div>
     </section>`;
 }
 
@@ -657,7 +733,7 @@ function renderSide() {
 /* ---------- after render: async bits ---------- */
 function after() {
   const el = $(".big-amount[data-count]");
-  if (el && !el.dataset.done) countUp(el);
+  if (el && render.entering) countUp(el);  // count up once per visit, not on every update
   if (view === "route") whatif();
   if (view === "sign" && V.plan && $("#hash-check")) {
     planHashHere(V.plan).then((h) => {
@@ -668,7 +744,7 @@ function after() {
   }
   const log = $("#chatlog");
   if (log) log.scrollTop = log.scrollHeight;
-  const ans = $("#answer-in");
+  const ans = $("#answer-in") || (view === "assistant" && $("#ask-in"));
   if (ans) ans.focus({ preventScroll: true });
 }
 function countUp(el) {
@@ -784,12 +860,15 @@ async function changeSetting(kind) {
 /* ---------- events ---------- */
 document.addEventListener("click", async (ev) => {
   if (ev.target.closest(".i-btn")) return;
-  const t = ev.target.closest("button, [data-route], [data-go]");
+  const t = ev.target.closest("button, [data-route], [data-go], [data-page]");
   if (!t || !V) return;
   const d = t.dataset;
   if (d.go) return go(d.go);
+  if (d.page === "pay") { const last = store.get("tp.view", ""); return go(reachable(last) ? last : autoStep()); }
+  if (d.page) { if (d.page === "vault") vaultDocs = null; return go(d.page); }
   if (d.side) { side = d.side; store.set("tp.side", side); return render(); }
-  if (d.sample) return act("invoice", { sample: d.sample }, { advance: false });
+  if (d.sample) return addInvoice({ sample: d.sample });
+  if (d.say) return say(d.say);
   if (d.answer) return act("answer", { field: V.question.field, value: d.answer });
   if (d.route) return d.route !== V.chosen_quote_id && act("route", { quote_id: d.route }, { advance: false });
   if (d.lab) return runLab(d.lab);
@@ -806,7 +885,7 @@ document.addEventListener("click", async (ev) => {
     case "consent": return act("consent", { accept: true });
     case "paste": {
       const text = prompt("Paste the invoice text (including any signature block):");
-      if (text) act("invoice", { text }, { advance: false });
+      if (text) addInvoice({ text });
       return;
     }
     case "refresh": return act("refresh", {}, { advance: false });
@@ -836,10 +915,10 @@ document.addEventListener("click", async (ev) => {
     }
   }
   switch (t.id) {
-    case "nav-lab": return go("lab");
-    case "nav-vault": vaultDocs = null; return go("vault");
     case "open-settings": $("#settings").hidden = false; renderSettings(); return $("#s-pin").focus();
     case "close-settings": $("#settings").hidden = true; return;
+    case "hide-live": store.set("tp.solo", "1"); return render();
+    case "show-live": store.set("tp.solo", "0"); return render();
     case "delete-data": {
       if (!confirm("Delete this session's data (invoice, answers, masking vault) and start over?")) return;
       try { await api("POST", `/api/session/${V.id}/delete`); } catch { /* already gone */ }
@@ -885,18 +964,28 @@ document.addEventListener("submit", async (ev) => {
   }
   if (ev.target.id === "ask") {
     const v = $("#ask-in").value.trim();
-    if (v) { await act("chat", { text: v }, { advance: false }); const a = $("#ask-in"); if (a) a.focus(); }
+    if (v) say(v);
   }
 });
+async function addInvoice(body) {  // every new invoice lands on the signature check
+  const r = await act("invoice", body, { advance: false });
+  if (r && V.invoice) go("verify");
+}
+async function say(text) {
+  await act("chat", { text }, { advance: false });
+  const a = $("#ask-in");
+  if (a) a.focus();
+}
 async function readFile(f) {
   if (f.size > 2 * 1024 * 1024) return toast("Invoices can be up to 2 MB.", true);
   if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
-    return act("invoice", { pdf: b64(new Uint8Array(await f.arrayBuffer())) }, { advance: false });
+    return addInvoice({ pdf: b64(new Uint8Array(await f.arrayBuffer())) });
   }
-  act("invoice", { text: await f.text() }, { advance: false });
+  addInvoice({ text: await f.text() });
 }
 document.addEventListener("dragover", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.add("over"); } });
 document.addEventListener("dragleave", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) d.classList.remove("over"); });
 document.addEventListener("drop", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.remove("over"); if (ev.dataTransfer.files[0]) readFile(ev.dataTransfer.files[0]); } });
 $("#settings").addEventListener("click", (ev) => { if (ev.target.id === "settings") $("#settings").hidden = true; });
+new ResizeObserver(() => document.documentElement.style.setProperty("--head", $(".top").offsetHeight + "px")).observe($(".top"));
 start().catch((e) => toast("Could not reach the TuitionPilot server: " + e.message, true));

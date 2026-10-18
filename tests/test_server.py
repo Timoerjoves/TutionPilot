@@ -50,10 +50,12 @@ class TestServer(unittest.TestCase):
         self.assertEqual(self.call("GET", "/../agent/agent.py")[0], 404)
 
     def test_pages(self):
-        for path, marker in [("/", b"Sign in"), ("/signin", b"signin.js"), ("/app", b"app.js")]:
+        for path, marker in [("/", b"Sign in"), ("/signin", b"signin.js"), ("/app", b"app.js"), ("/assistant", b"app.js")]:
             code, _, data = self.call("GET", path)
             self.assertEqual(code, 200, path)
             self.assertIn(marker, data, path)
+        code, headers, _ = self.call("GET", "/fonts/Manrope.woff2")
+        self.assertEqual((code, headers["Content-Type"]), (200, "font/woff2"))
 
     def test_full_payment_over_http(self):
         code, r = self.post("/api/session", {"role": "parent"})  # a guest asking to be the parent gets a student view
