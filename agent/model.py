@@ -22,7 +22,7 @@ LABELS = {  # matched against the label, then its shorter endings ("payee bank s
     "amount": r"amount due|total due|total amount|amount|total",
     "registry_id": r"payee registry id|registry id",
     "country": r"country",
-    "account_masked": r"bank account|account(?: masked| number)?",
+    "account_masked": r"bank account|account(?: masked| number)?|(?:account / )?iban",
     "swift": r"swift(?:/bic)?|bic|swift code",
 }
 AMOUNT_KEYS = ("value", "amount", "total", "amount_due", "total_due")
@@ -88,9 +88,10 @@ class OfflineModel:
         """Read 'Label: value' lines. Returns (invoice_message, uncertain_fields)."""
         found = {}
         for line in masked_text.splitlines():
-            if ":" not in line:
+            sep = ":" if ":" in line else "\t"  # a tab = label and value printed apart on one line (PDFs)
+            if sep not in line:
                 continue
-            label, value = (s.strip() for s in line.split(":", 1))
+            label, value = (s.strip() for s in line.split(sep, 1))
             words = label.split()
             key = next((k for i in range(len(words)) for k, pat in LABELS.items()
                         if re.fullmatch(pat, " ".join(words[i:]), re.I)), None)

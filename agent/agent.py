@@ -5,6 +5,8 @@ explanations, and sees masked text only. Every tool call passes the policy engin
 
     Intake -> Mask -> Extract -> Validate -> Rules -> Compare -> Plan -> Policy gate -> Approve -> Execute -> Record -> Track
 """
+import base64
+import binascii
 import json
 import re
 import uuid
@@ -27,6 +29,7 @@ from security import Masker, ModelSawLog, ground_or_replace, prepare_for_model, 
 from security.pki import TrustStore, verify_approval, split as split_signed
 
 from .model import OfflineModel, _date, json_to_text
+from .pdf import pdf_to_text
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = json.loads((ROOT / "app" / "demo_config.json").read_text(encoding="utf-8"))
@@ -174,7 +177,7 @@ class Agent:
             self._say(s, "agent", "Thank you. Upload or paste the university's fee invoice, or pick a sample.")
         return s
 
-    def upload_invoice(self, sid, text=None, sample=None):
+    def upload_invoice(self, sid, text=None, sample=None, pdf=None):
         s = self.get(sid)
         if not s["consent"]:
             raise PermissionError("Please accept the data consent first.")
@@ -183,6 +186,11 @@ class Agent:
             if not re.fullmatch(r"[a-z_]+", sample) or not path.exists():
                 raise ValueError("unknown sample")
             text = path.read_text(encoding="utf-8")
+        if pdf:  # base64 PDF bytes from the browser; read as printed text (an unsigned PDF can never be paid)
+            try:
+                text = pdf_to_text(base64.b64decode(pdf, validate=True))
+            except (binascii.Error, TypeError):
+                raise ValueError("the PDF upload is damaged; try again")
         if not text or not text.strip():
             raise ValueError("invoice text is empty")
         self._reset_from_invoice(s)

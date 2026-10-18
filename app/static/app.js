@@ -216,8 +216,8 @@ function vInvoice() {
   const picker = `<section class="card">
       <div class="row between"><h2>${V.invoice ? "Use another invoice" : "Add the university's invoice"}</h2><span class="muted small">Synthetic samples</span></div>
       <div class="drop" id="drop" style="margin:14px 0">
-        <b>Drop an invoice file here</b>
-        <div class="muted small">or <label class="link" style="cursor:pointer">choose a file<input type="file" id="file" accept=".txt,.json,text/plain,application/json" hidden></label>
+        <b>Drop an invoice file here</b> <span class="muted small">PDF, JSON or text, up to 2 MB</span>
+        <div class="muted small">or <label class="link" style="cursor:pointer">choose a file<input type="file" id="file" accept=".pdf,.txt,.json,application/pdf,text/plain,application/json" hidden></label>
         · <button class="link" data-act="paste">paste text</button></div>
       </div>
       <h3 style="margin:6px 0 10px">Genuine invoices</h3><div class="samples">${gallery("good")}</div>
@@ -856,11 +856,12 @@ document.addEventListener("submit", async (ev) => {
     if (v) { await act("chat", { text: v }, { advance: false }); const a = $("#ask-in"); if (a) a.focus(); }
   }
 });
-function readFile(f) {
-  if (f.size > 64 * 1024) return toast("That file is too large for an invoice.", true);
-  const reader = new FileReader();
-  reader.onload = () => act("invoice", { text: String(reader.result) }, { advance: false });
-  reader.readAsText(f);
+async function readFile(f) {
+  if (f.size > 2 * 1024 * 1024) return toast("Invoices can be up to 2 MB.", true);
+  if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+    return act("invoice", { pdf: b64(new Uint8Array(await f.arrayBuffer())) }, { advance: false });
+  }
+  act("invoice", { text: await f.text() }, { advance: false });
 }
 document.addEventListener("dragover", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.add("over"); } });
 document.addEventListener("dragleave", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) d.classList.remove("over"); });

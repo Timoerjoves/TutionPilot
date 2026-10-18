@@ -19,12 +19,12 @@ from app import lab
 
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 64 * 1024
-MAX_VAULT_BODY = 4 * 1024 * 1024  # a sealed file of up to 2 MB, base64-encoded
+MAX_VAULT_BODY = 4 * 1024 * 1024  # a sealed file or PDF invoice of up to 2 MB, base64-encoded
 PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html"}
 LOCK = threading.Lock()
 SESSION_ACTIONS = {
     "consent": lambda a, sid, b: a.consent(sid, b.get("accept")),
-    "invoice": lambda a, sid, b: a.upload_invoice(sid, text=b.get("text"), sample=b.get("sample")),
+    "invoice": lambda a, sid, b: a.upload_invoice(sid, text=b.get("text"), sample=b.get("sample"), pdf=b.get("pdf")),
     "answer": lambda a, sid, b: a.answer(sid, b.get("field"), b.get("value")),
     "chat": lambda a, sid, b: a.chat(sid, b.get("text")),
     "route": lambda a, sid, b: a.choose_route(sid, b.get("quote_id")),
@@ -64,7 +64,7 @@ def make_handler(agent):
 
         def _body(self):
             n = int(self.headers.get("Content-Length") or 0)
-            if n > (MAX_VAULT_BODY if self.path.endswith("/vault_put") else MAX_BODY):
+            if n > (MAX_VAULT_BODY if self.path.endswith(("/vault_put", "/invoice")) else MAX_BODY):
                 raise ValueError("request too large")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
