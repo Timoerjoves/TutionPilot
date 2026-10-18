@@ -1,0 +1,26 @@
+{
+  "amount": {
+    "currency": "USD",
+    "value": "20000.00"
+  },
+  "contract_version": "1.1",
+  "description": "Tuition fee, Spring 2027",
+  "due_on": "2026-11-15",
+  "invoice_id": "INV-SYN-0001",
+  "issued_on": "2026-10-01",
+  "payee": {
+    "bank": {
+      "account_masked": "XXXX-XXXX-4821",
+      "swift": "SYNTUS33"
+    },
+    "country": "US",
+    "name": "Northbridge University (synthetic)",
+    "registry_id": "PAYEE-US-0007"
+  },
+  "purpose": "education",
+  "student": {
+    "name": "Asha Student (synthetic)",
+    "student_id": "NBU-2026-1142"
+  },
+  "type": "invoice"
+}

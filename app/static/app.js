@@ -603,6 +603,7 @@ function describe(e) {
     return [`Tool · ${d.tool}`, [d.tier, d.cheapest && "cheapest " + d.cheapest, d.grounded !== undefined && "grounded " + d.grounded].filter(Boolean).join(" · "), ""];
   }
   if (e.event === "untrusted_text_flagged") return [EV[e.event], `${d.source}: ${(d.findings || []).map((f) => f.category).join(", ")}`, "flag"];
+  if (e.event === "resumed") return ["Resumed after your answer", `Not repeated: ${(d.skipped_done || []).join(", ") || "nothing yet"}`, "allow"];
   if (e.event === "plan_built") return [EV[e.event], `${d.plan_id} · max ${d.max_tier} · ${short(d.plan_hash)}`, ""];
   if (["approval_refused", "bank_refused", "payment_refused", "approval_void", "escalated"].includes(e.event)) return [EV[e.event], d.reason || (d.codes || []).join(", "), "deny"];
   if (["approved", "payment_executed", "receipt_written"].includes(e.event)) return [EV[e.event], d.key_id || d.txn_id || d.receipt_id || "", e.event === "approved" ? "sig" : "allow"];
@@ -611,7 +612,11 @@ function describe(e) {
 function renderSide() {
   let html = "";
   if (side === "live") {
-    const pipe = `<ul class="pipe">${V.timeline.map((s) => `<li class="${s.status}"><i></i>${s.n}. ${esc(s.name)}</li>`).join("")}</ul>`;
+    const n = V.next;
+    const next = n ? `<div class="next-card"><div class="eyebrow">Next action${info("Chosen from the session's current state, not a fixed script. Completed checks are kept and never re-run.")}</div>
+      <b>${esc(n.action)}</b><p class="small muted">${esc(n.why)}</p>
+      ${n.done.length ? `<p class="tiny faint">Already done: ${n.done.map((x) => esc(x.text)).join(" · ")}</p>` : ""}</div>` : "";
+    const pipe = next + `<ul class="pipe">${V.timeline.map((s) => `<li class="${s.status}"><i></i>${s.n}. ${esc(s.name)}</li>`).join("")}</ul>`;
     const evs = [...V.events].reverse();
     let fresh = 0;
     html = pipe + (evs.length ? evs.map((e) => {

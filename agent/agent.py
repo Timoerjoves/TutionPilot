@@ -306,7 +306,40 @@ class Agent:
             return self._advance(s, ask=False)
         shown = "(PAN given, masked)" if field == "pan" and s["answers"].get("pan") else value
         self._say(s, "user", shown)
+        self._log("resumed", {"after_answer": field, "skipped_done": [d["check"] for d in self._done(s)]}, sid)
         return self._advance(s)
+
+    # ---------- what to do next, decided from the session's state (not a fixed script) ----------
+    def _done(self, s):
+        """Checks already completed for this invoice; the agent never repeats them on resume."""
+        t = s["trust"]
+        done = [("read_invoice", s["invoice"] is not None, "Invoice read and masked"),
+                ("check_payee", t is not None, "Signature chain " + ("verified" if t and t["verified"] else "checked: not verified")),
+                ("compare_routes", s["ranked"] is not None, "Routes compared and costs computed"),
+                ("approval", s["approval"] is not None, "Parent's signature accepted"),
+                ("sandbox_pay", s["txn"] is not None, "Paid in the sandbox")]
+        return [{"check": c, "text": text} for c, ok, text in done if ok]
+
+    def next_action(self, s):
+        """The one most useful next step and why, from the current state."""
+        q = self.pending_question(s)
+        if not s["consent"]:
+            act, why = "Ask for consent", "Nothing is read until the family agrees to how data is used."
+        elif s["invoice"] is None:
+            act, why = "Wait for the invoice", "Every number depends on the invoice."
+        elif q and q["field"] in INVOICE_QUESTIONS:
+            act, why = f"Ask one question: {q['text']}", "The invoice is missing this, and guessing could pay the wrong amount or date."
+        elif q:
+            act, why = f"Ask one question: {q['text']}", "TCS and the LRS limit depend on it; the invoice can't tell."
+        elif s["escalations"]:
+            act, why = "Hand over to a human", s["escalations"][0]["text"]
+        elif s["txn"]:
+            act, why = "Done: receipt issued", "Paid once in the sandbox; a second click does nothing."
+        elif s["approval"]:
+            act, why = "Pay in the sandbox", "The parent signed this exact plan; the policy gate checks it again before paying."
+        else:
+            act, why = "Wait for the parent's signature", "A payment is tier T3: it needs the PIN and the parent device's signature of this plan."
+        return {"action": act, "why": why, "done": self._done(s)}
 
     def _store_answer(self, s, field, value):
         inv, a = s["invoice"], s["answers"]
@@ -831,7 +864,7 @@ class Agent:
             "id": s["id"], "role": s["role"], "consent": s["consent"], "signed_in": s["signed_in"], "device": s["device"],
             "invoice": s["invoice"], "uncertain": s["uncertain"], "invoice_scan": s["invoice_scan"],
             "trust": s["trust"] and {k: v for k, v in s["trust"].items() if k != "certificate"},
-            "question": self.pending_question(s), "chat": s["chat"], "flags": s["flags"],
+            "question": self.pending_question(s), "next": self.next_action(s), "chat": s["chat"], "flags": s["flags"],
             "escalations": s["escalations"], "warnings": s["warnings"], "prior_used": s["prior_used"],
             "ranked": ranked, "chosen_quote_id": s["chosen_quote_id"],
             "explanation": s.get("explanation"), "lrs": s["lrs"], "draft": s["draft"], "plan": s["plan"],

@@ -300,6 +300,25 @@ class TestAgentFlow(unittest.TestCase):
         self.a.answer(self.sid, "due_on", "2026-11-15")
         self.assertEqual(self.a.get(self.sid)["invoice"]["due_on"], "2026-11-15")
 
+    def test_next_action_follows_state_and_resume_skips_done_checks(self):
+        s = self.a.get(self.sid)
+        self.assertEqual(self.a.next_action(s)["action"], "Ask for consent")
+        self.a.consent(self.sid, True)
+        self.a.upload_invoice(self.sid, sample="missing_due_date")
+        n = self.a.next_action(s)
+        self.assertIn("When does the university need the payment", n["action"])  # one targeted question
+        self.assertIn("check_payee", [d["check"] for d in n["done"]])
+        self.a.answer(self.sid, "due_on", "2026-11-15")
+        resumed = [e for e in self.a.audit.entries if e["event"] == "resumed"][-1]["data"]
+        self.assertEqual(resumed["after_answer"], "due_on")
+        self.assertIn("check_payee", resumed["skipped_done"])
+        self.assertIn("Who is sending the money", self.a.next_action(s)["action"])  # moves on, not back
+        for field, value in FAMILY:
+            self.a.answer(self.sid, field, value)
+        self.assertEqual(self.a.next_action(s)["action"], "Wait for the parent's signature")
+        checks = [e for e in self.a.audit.entries if e["event"] == "tool_call" and e["data"].get("tool") == "check_payee"]
+        self.assertEqual(len(checks), 1)  # the signature chain ran once, never again on resume
+
     def test_payment_made_here_counts_toward_the_next_invoice(self):
         # regression: a second invoice must see the first payment in this year's total (TCS and LRS)
         self.complete()

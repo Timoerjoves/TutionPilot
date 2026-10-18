@@ -1,0 +1,52 @@
+{
+  "amount": {
+    "currency": "USD",
+    "value": "20000.00"
+  },
+  "attestation": {
+    "alg": "Ed25519",
+    "certificate": {
+      "certificate": {
+        "issuer": "ed25519:0e87e70615156b53",
+        "key_id": "ed25519:0e87e70615156b53",
+        "public_key": "yt/YLY007PQbZ884AOnXOHjyrSyGlVgBe5QtStEgTUA=",
+        "serial": "CERT-FAKE-1",
+        "subject": {
+          "bank": {
+            "account_masked": "XXXX-XXXX-6666",
+            "swift": "FAKEUS66"
+          },
+          "country": "US",
+          "currency": "USD",
+          "name": "Northbrldge Universlty (synthetic)",
+          "payee_id": "PAYEE-US-0999"
+        },
+        "type": "payee_certificate",
+        "valid_from": "2026-09-01",
+        "valid_to": "2027-08-31"
+      },
+      "signature": "zjIEsIkk90VQ7wAKEfG0nDkwaOv0eBZOBx9XrBOE8rLv8P2FbyoAi0RDx7fAxdWOh57qtAjDY07a9hhmpyM8DQ=="
+    },
+    "signature": "liMKPc2RD2uuJNNsLY7G0IuCqP8gThATFqkNz4a469RowLP5DqyDHkanEoZx2NLUM0dTgoOzDNbiXD7VeQkiDA=="
+  },
+  "contract_version": "1.1",
+  "description": "Tuition fee, Spring 2027",
+  "due_on": "2026-11-15",
+  "invoice_id": "INV-SYN-0006",
+  "issued_on": "2026-10-01",
+  "payee": {
+    "bank": {
+      "account_masked": "XXXX-XXXX-6666",
+      "swift": "FAKEUS66"
+    },
+    "country": "US",
+    "name": "Northbrldge Universlty (synthetic)",
+    "registry_id": "PAYEE-US-0999"
+  },
+  "purpose": "education",
+  "student": {
+    "name": "Asha Student (synthetic)",
+    "student_id": "NBU-2026-1142"
+  },
+  "type": "invoice"
+}

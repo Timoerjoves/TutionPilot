@@ -356,3 +356,7 @@ a.wordmark { text-decoration: none; }
 .vault-row small { color: var(--muted); }
 @keyframes grow { from { transform: scaleX(0); } to { transform: none; } }
 @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+
+/* next action */
+.next-card { margin: 12px 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border)); }
+.next-card b { display: block; margin-top: 4px; font-size: 14px; } .next-card p { margin: 4px 0 0; }
