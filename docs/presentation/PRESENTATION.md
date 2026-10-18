@@ -1,26 +1,23 @@
-# Presentation (9 slides, about 10 minutes)
+# Presentation (10 slides, about 10 minutes)
 
-- **Live deck (private, Chandan's account):** https://claude.ai/artifact/E9FusU8285LxbRy6PXmtm6
-- **PDF for submission:** [TuitionPilot_deck.pdf](TuitionPilot_deck.pdf) (exported 18 Oct).
-- **Slide sources:** `slides/` holds each slide as it was on 18 Oct (`slides/deck.json` is the order).
-- Rerun the numbers on slide 8 just before submitting.
+- **For the judges:** [TuitionPilot_deck.pptx](TuitionPilot_deck.pptx) (PowerPoint, with speaker notes on every slide) and [TuitionPilot_deck.pdf](TuitionPilot_deck.pdf) (same deck as PDF). Built 18 Oct 2026; fonts are Cambria and Calibri, which ship with Office.
+- **Architecture diagram used on slide 4:** [../architecture.svg](../architecture.svg) / [../architecture.png](../architecture.png).
+- **Web version (9 slides, 18 Oct):** the live deck at https://claude.ai/artifact/E9FusU8285LxbRy6PXmtm6 (private, Chandan's account), its PDF export [TuitionPilot_web_deck.pdf](TuitionPilot_web_deck.pdf), and its slide sources with speaker notes in `slides/`. Its slide 7 ("Built for families: sign-in, vault, next action") covers what this deck spreads over slides 3 and 8.
 
 | # | Slide | Time | Key message |
 |---|---|---|---|
-| 1 | **TuitionPilot** (cover) | 1:00 | Families work out four things alone (LRS limit, TCS, real cost, papers); one mistake costs money. TuitionPilot does it, explains every number, and pays only after the parent's device signs. |
-| 2 | **Product: a guided six-step story** | 1:15 | Welcome → Invoice (signature chain) → Questions → Best route (chart, what-if, LRS gauge) → Review & sign → Receipt; live agent panel; attack lab. Code computes, the model explains; the model is an offline stand-in today. |
-| 3 | **LRS and TCS: the rules the engine uses** | 1:15 | A rule table with value, date, source and status. TCS = rate × (this year's total − the larger of earlier payments or Rs 10 lakh). Four rules are still unverified and are flagged. |
-| 4 | **Worked examples, step by step** | 1:15 | A2: Rs 15 lakh self-funded → TCS Rs 10,000 (loan: Rs 0). A8: USD 20,000 at 90.20 → Rs 18,04,000 + TCS 16,080 + fee 3,000 = Rs 18,23,080. Also A1, A4, A5, A6. |
-| 5 | **Route comparison: why Provider B wins** | 1:15 | A has the lower fee, but B is Rs 4,620 cheaper (rate +6,000, fee −1,500, TCS +120). Hidden markup at A: Rs 10,000 (0.56%). |
-| 6 | **Security: signatures instead of lists** | 1:15 | University: trust root → certificate (bank account) → invoice signature → bank match → printed text. Parent: device key → enrol with the PIN and a parent device's approval → recompute hash → sign → policy verifies. Tiers T0–T4. |
-| 7 | **Built for families: sign-in, vault, next action** | 1:00 | Passwordless device sign-in with fixed roles; encrypted family vault (server holds ciphertext only); one targeted question and resume; PDF and JSON intake. |
-| 8 | **Evidence: 27 scenarios, one command** | 1:00 | 27/27 scenarios, 227 tests, 16/16 attacks stopped, 153 audit entries verify. The finance audit (400 cases) found 3 agent bugs, all fixed. |
-| 9 | **Limits, stated plainly** | 1:00 | Unverified tax rules; GST on conversion not modelled; offline AI stand-in; un-hardened Ed25519; synthetic keys; addresses and unlabelled names not masked; scanned PDFs need OCR; fixed demo PIN; audit log is tamper-evident, not tamper-proof. |
-
-Full speaker notes are inside each slide file (`<aside>` at the end of each `slides/*.html`) and in the live deck.
+| 1 | **TuitionPilot** (cover) | 0:45 | An AI agent that checks the invoice is genuine, explains every rupee, and pays only after the parent's own device signs the exact plan. |
+| 2 | **Four hard questions, one big fraud risk** | 1:00 | LRS limit, TCS, real cost, papers; the "bank details have changed" scam fails by design. |
+| 3 | **One guided flow, from invoice to receipt** | 1:00 | Six steps; live agent panel; attack lab; family devices and vault. Code computes, the AI explains (offline stand-in today). |
+| 4 | **Architecture** | 1:00 | Keys stay with people (orange), the AI step sees masked text (dashed), money moves only on the navy path inside the sandbox. |
+| 5 | **India's LRS and TCS rules** | 1:15 | Rule table with status; A2 worked: Rs 15 lakh → TCS Rs 10,000 (loan: Rs 0). Unverified rules flagged. |
+| 6 | **Route comparison** | 1:15 | Stacked chart of markup + fee + TCS; B is Rs 4,620 cheaper (rate +6,000, fee −1,500, TCS +120). |
+| 7 | **Signatures instead of payee lists** | 1:15 | University chain (root → certificate → invoice → bank → printed text); parent device signing. |
+| 8 | **Defence in depth** | 1:00 | Tiers T0–T4; masking, grounding, scanner, breaker + emergency stop, audit chain, encrypted vault. |
+| 9 | **Evidence** | 1:00 | 227 tests, 27/27 scenarios, 16/16 attacks stopped, 153 audit entries verify; finance audit of 400 cases. |
+| 10 | **Honest limits, and what comes next** | 1:00 | Unverified tax rules; offline AI stand-in; un-hardened Ed25519; synthetic keys; next steps. |
 
 ## Before presenting
-- [ ] Rerun `python -m unittest discover -s tests -t .`, `python -m scenarios.runner` and `python -m app.demo_run`, and update slide 7 if any number changed.
-- [ ] Nishanth checks slides 2 and 6 against the app.
-- [ ] If any tax rule gets verified, update slides 3 and 8 and the rule pack (with its source).
-- [ ] Export PPTX/PDF into this folder for the submission.
+- [ ] Rerun `python -m unittest discover -s tests -t .`, `python -m scenarios.runner` and `python -m app.demo_run`; update slide 9 if any number changed.
+- [ ] Nishanth checks slides 3, 4, 7 and 8 against the app.
+- [ ] If any tax rule gets verified, update slides 5 and 10 and the rule pack (with its source).

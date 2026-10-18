@@ -1,6 +1,6 @@
 # Scenario results
 
-Generated 2026-10-18T05:07:02+00:00 by `python -m scenarios.runner`. Rule pack `india-lrs-tcs` version `2026.10.16-r1`, Python 3.14.6.
+Generated 2026-10-18T05:15:54+00:00 by `python -m scenarios.runner`. Rule pack `india-lrs-tcs` version `2026.10.16-r1`, Python 3.14.6.
 
 **27 pass, 0 fail, 0 pending** of 27. PENDING means the code it needs is not built yet; it is not counted as a pass.
 Synthetic data only. Rows marked VERIFY rely on a rule not yet checked against RBI / Income Tax sources.

@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="Arial, Helvetica, sans-serif" role="img" aria-label="TuitionPilot architecture: people and keys outside the server, the agent pipeline, guards, and the money path inside the sandbox">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3A4560"/></marker>
+  </defs>
+  <rect width="1600" height="1000" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="40" y="62" font-size="30" font-weight="700" fill="#14213D">TuitionPilot architecture</text>
+  <text x="40" y="92" font-size="17" fill="#5A6378">Code computes, the model explains. Signatures instead of lists. The parent's device signs; the agent never can.</text>
+
+  <!-- Actors: people and keys outside the server -->
+  <g font-size="14" fill="#3A4560">
+    <rect x="40" y="120" width="340" height="110" rx="14" fill="#FBEFE3" stroke="#B4561F" stroke-width="2"/>
+    <text x="60" y="152" font-size="18" font-weight="700" fill="#14213D">University</text>
+    <text x="60" y="178">Holds its own Ed25519 key</text>
+    <text x="60" y="200">Signs every invoice it sends</text>
+
+    <rect x="420" y="120" width="340" height="110" rx="14" fill="#FBEFE3" stroke="#B4561F" stroke-width="2"/>
+    <text x="440" y="152" font-size="18" font-weight="700" fill="#14213D">Parent device (browser)</text>
+    <text x="440" y="178">Non-exportable keys: Ed25519 to sign,</text>
+    <text x="440" y="200">X25519 for the vault. Signs the plan hash.</text>
+
+    <rect x="800" y="120" width="360" height="110" rx="14" fill="#FBEFE3" stroke="#B4561F" stroke-width="2"/>
+    <text x="820" y="152" font-size="18" font-weight="700" fill="#14213D">Student device (browser)</text>
+    <text x="820" y="178">Signs in and reviews; uses the vault</text>
+    <text x="820" y="200">Can never approve a payment</text>
+
+    <rect x="1200" y="120" width="360" height="110" rx="14" fill="#FBEFE3" stroke="#B4561F" stroke-width="2"/>
+    <text x="1220" y="152" font-size="18" font-weight="700" fill="#14213D">Trust root (kept offline)</text>
+    <text x="1220" y="178">Certifies each university + its bank account</text>
+    <text x="1220" y="200">Signs the revocation list</text>
+  </g>
+  <line x1="380" y1="175" x2="418" y2="175" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="352" y="250" font-size="13" fill="#5A6378">signed invoice</text>
+
+  <!-- Server container -->
+  <rect x="40" y="270" width="1520" height="640" rx="18" fill="#F4F6FA" stroke="#14213D" stroke-width="2"/>
+  <text x="64" y="300" font-size="16" font-weight="700" fill="#14213D">TuitionPilot server · 127.0.0.1 only · standard library</text>
+
+  <!-- Row A: UI and trust store -->
+  <rect x="70" y="318" width="1080" height="84" rx="12" fill="#FFFFFF" stroke="#1F5FA8" stroke-width="2"/>
+  <text x="90" y="348" font-size="17" font-weight="700" fill="#14213D">Web app</text>
+  <text x="90" y="374" font-size="14" fill="#3A4560">Landing · passwordless sign-in (device signs a 2-min challenge) · 6-step story: Welcome, Invoice, Questions,</text>
+  <text x="90" y="394" font-size="14" fill="#3A4560">Best route, Review &amp; sign, Receipt · Agent live panel · Attack lab · Family vault · strict CSP, every value escaped</text>
+  <rect x="1180" y="318" width="350" height="84" rx="12" fill="#FFFFFF" stroke="#1F5FA8" stroke-width="2"/>
+  <text x="1200" y="348" font-size="17" font-weight="700" fill="#14213D">Trust store</text>
+  <text x="1200" y="374" font-size="14" fill="#3A4560">Root public key, certificates,</text>
+  <text x="1200" y="394" font-size="14" fill="#3A4560">revocation list (data/trust/)</text>
+
+  <line x1="590" y1="230" x2="590" y2="316" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="600" y="262" font-size="13" fill="#5A6378">upload · sign in · signed approval</text>
+  <line x1="980" y1="230" x2="980" y2="316" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="990" y="262" font-size="13" fill="#5A6378">sign in · review</text>
+  <line x1="1380" y1="230" x2="1380" y2="316" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="1390" y="262" font-size="13" fill="#5A6378">certificates</text>
+
+  <!-- Row B: agent pipeline -->
+  <g font-size="14" fill="#DCE7F5">
+    <rect x="72" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="86" y="496" font-size="16" font-weight="700" fill="#FFFFFF">1 Intake</text>
+    <text x="86" y="520">PDF · JSON · text</text>
+    <text x="86" y="540">consent first</text>
+
+    <rect x="257" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="271" y="496" font-size="16" font-weight="700" fill="#FFFFFF">2 Mask</text>
+    <text x="271" y="520">PAN, IDs, names</text>
+    <text x="271" y="540">become tokens</text>
+
+    <rect x="442" y="470" width="162" height="100" rx="10" fill="#FFFFFF" stroke="#1F5FA8" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="456" y="496" font-size="16" font-weight="700" fill="#14213D">3 Extract</text>
+    <text x="456" y="520" fill="#3A4560">AI model: offline</text>
+    <text x="456" y="540" fill="#3A4560">stand-in, masked in</text>
+
+    <rect x="627" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="641" y="496" font-size="16" font-weight="700" fill="#FFFFFF">4 Verify chain</text>
+    <text x="641" y="520">root → certificate</text>
+    <text x="641" y="540">→ invoice → bank</text>
+
+    <rect x="812" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="826" y="496" font-size="16" font-weight="700" fill="#FFFFFF">5 Rules engine</text>
+    <text x="826" y="520">LRS headroom,</text>
+    <text x="826" y="540">TCS, landed cost</text>
+
+    <rect x="997" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="1011" y="496" font-size="16" font-weight="700" fill="#FFFFFF">6 Compare</text>
+    <text x="1011" y="520">routes; line-by-line</text>
+    <text x="1011" y="540">“why”, markup</text>
+
+    <rect x="1182" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="1196" y="496" font-size="16" font-weight="700" fill="#FFFFFF">7 A2 draft</text>
+    <text x="1196" y="520">+ missing-papers</text>
+    <text x="1196" y="540">checklist</text>
+
+    <rect x="1367" y="470" width="162" height="100" rx="10" fill="#1F5FA8"/>
+    <text x="1381" y="496" font-size="16" font-weight="700" fill="#FFFFFF">8 Plan</text>
+    <text x="1381" y="520">asks, never guesses;</text>
+    <text x="1381" y="540">escalates</text>
+  </g>
+  <g stroke="#3A4560" stroke-width="2" marker-end="url(#a)">
+    <line x1="234" y1="520" x2="255" y2="520"/><line x1="419" y1="520" x2="440" y2="520"/>
+    <line x1="604" y1="520" x2="625" y2="520"/><line x1="789" y1="520" x2="810" y2="520"/>
+    <line x1="974" y1="520" x2="995" y2="520"/><line x1="1159" y1="520" x2="1180" y2="520"/>
+    <line x1="1344" y1="520" x2="1365" y2="520"/>
+  </g>
+  <line x1="153" y1="402" x2="153" y2="468" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <polyline points="1355,402 1355,440 708,440 708,468" fill="none" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="166" y="440" font-size="13" fill="#5A6378">invoice + answers</text>
+  <text x="1010" y="432" font-size="13" fill="#5A6378">checks every link; pays the signed data only</text>
+
+  <!-- Row C: guards and shared data -->
+  <g font-size="14" fill="#3A4560">
+    <rect x="72" y="610" width="347" height="80" rx="10" fill="#FFFFFF" stroke="#8A93A6" stroke-width="1.5"/>
+    <text x="88" y="638" font-size="16" font-weight="700" fill="#14213D">Untrusted-text scanner</text>
+    <text x="88" y="662">Injection, fake admin, payee change,</text>
+    <text x="88" y="680">pressure; undoes hidden characters</text>
+
+    <rect x="442" y="610" width="347" height="80" rx="10" fill="#FFFFFF" stroke="#8A93A6" stroke-width="1.5"/>
+    <text x="458" y="638" font-size="16" font-weight="700" fill="#14213D">Grounding check</text>
+    <text x="458" y="662">Every number the model writes must</text>
+    <text x="458" y="680">match the engine, or engine text shows</text>
+
+    <rect x="812" y="610" width="347" height="80" rx="10" fill="#FFFFFF" stroke="#8A93A6" stroke-width="1.5"/>
+    <text x="828" y="638" font-size="16" font-weight="700" fill="#14213D">Rule pack (versioned)</text>
+    <text x="828" y="662">Value, date, source, status per rule;</text>
+    <text x="828" y="680">“unverified” rules flagged in output</text>
+
+    <rect x="1182" y="610" width="230" height="80" rx="10" fill="#FFFFFF" stroke="#8A93A6" stroke-width="1.5"/>
+    <text x="1198" y="638" font-size="16" font-weight="700" fill="#14213D">Contract v1.1</text>
+    <text x="1198" y="662">5 checked messages;</text>
+    <text x="1198" y="680">money as decimal text</text>
+  </g>
+  <g stroke="#8A93A6" stroke-width="1.5" stroke-dasharray="4 4">
+    <line x1="153" y1="570" x2="153" y2="610"/><line x1="523" y1="570" x2="523" y2="610"/><line x1="893" y1="570" x2="893" y2="610"/>
+  </g>
+
+  <!-- Row D: money path (sandbox only) and vault -->
+  <g font-size="14" fill="#C9D3E6">
+    <rect x="1180" y="740" width="350" height="140" rx="12" fill="#14213D"/>
+    <text x="1200" y="770" font-size="17" font-weight="700" fill="#FFFFFF">Policy gate (every tool call)</text>
+    <text x="1200" y="796">T0 read · T1 compute · T2 click</text>
+    <text x="1200" y="816">T3 PIN + parent device signature</text>
+    <text x="1200" y="836">over the plan hash · T4 never</text>
+    <text x="1200" y="860">Cap · emergency stop · breaker</text>
+
+    <rect x="800" y="740" width="340" height="140" rx="12" fill="#14213D"/>
+    <text x="820" y="770" font-size="17" font-weight="700" fill="#FFFFFF">Sandbox bank (no real money)</text>
+    <text x="820" y="796">Quotes valid 30 minutes</text>
+    <text x="820" y="816">Pays once per approval</text>
+    <text x="820" y="836">Re-checks the university's</text>
+    <text x="820" y="856">certificate before paying</text>
+
+    <rect x="420" y="740" width="340" height="140" rx="12" fill="#14213D"/>
+    <text x="440" y="770" font-size="17" font-weight="700" fill="#FFFFFF">Audit log + receipt</text>
+    <text x="440" y="796">Each entry stores the hash</text>
+    <text x="440" y="816">of the one before</text>
+    <text x="440" y="836">verify command names the</text>
+    <text x="440" y="856">first edited entry</text>
+  </g>
+  <rect x="72" y="740" width="308" height="140" rx="12" fill="#FFFFFF" stroke="#B4561F" stroke-width="2"/>
+  <g font-size="14" fill="#3A4560">
+    <text x="92" y="770" font-size="17" font-weight="700" fill="#14213D">Family vault store</text>
+    <text x="92" y="796">Browser encrypts each file</text>
+    <text x="92" y="816">(AES-256-GCM); file key locked</text>
+    <text x="92" y="836">per device (X25519 + HKDF)</text>
+    <text x="92" y="856">Server holds ciphertext only</text>
+  </g>
+  <polyline points="1448,570 1448,738" fill="none" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <text x="1456" y="718" font-size="13" fill="#5A6378">plan</text>
+  <line x1="1180" y1="810" x2="1142" y2="810" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+  <line x1="800" y1="810" x2="762" y2="810" stroke="#3A4560" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- Legend -->
+  <g font-size="14" fill="#3A4560">
+    <rect x="40" y="938" width="22" height="22" rx="4" fill="#FBEFE3" stroke="#B4561F" stroke-width="2"/>
+    <text x="72" y="955">People and keys outside the server</text>
+    <rect x="360" y="938" width="22" height="22" rx="4" fill="#1F5FA8"/>
+    <text x="392" y="955">Agent pipeline (dashed: the AI model step)</text>
+    <rect x="730" y="938" width="22" height="22" rx="4" fill="#FFFFFF" stroke="#8A93A6" stroke-width="1.5"/>
+    <text x="762" y="955">Guards and shared data</text>
+    <rect x="980" y="938" width="22" height="22" rx="4" fill="#14213D"/>
+    <text x="1012" y="955">Money path, sandbox only</text>
+    <text x="1250" y="955" fill="#5A6378">Synthetic data · not tax advice</text>
+  </g>
+</svg>
