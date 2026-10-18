@@ -23,6 +23,7 @@ async function load() {
   const r = supported ? await api("GET", "/api/devices") : { devices: [] };
   const devices = r.devices;
   bootstrap = !!r.bootstrap;
+  if (bootstrap) ["parent", "student"].forEach((x) => store.del("tp.enrol." + x));  // codes from an earlier server run are void
   enrolled = !!device && devices.some((d) => d.key_id === device.keyId);
   render();
 }
@@ -91,7 +92,7 @@ document.addEventListener("submit", async (ev) => {
   if (busy) return;
   busy = true;
   const pin = $("#pin") && $("#pin").value, label = $("#label") && $("#label").value.trim();
-  const code = ev.target.id === "enrol" ? store.get(codeKey()) : null;
+  const code = ev.target.id === "enrol" && !bootstrap ? store.get(codeKey()) : null;  // the first parent device needs no code
   render();
   try {
     if (ev.target.id === "request") {
