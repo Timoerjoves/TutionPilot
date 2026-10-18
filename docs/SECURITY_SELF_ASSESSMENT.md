@@ -8,7 +8,7 @@ We list what is built, how it is tested, and what is still weak. Nothing here ha
 | | |
 |---|---|
 | **Posture** | Money moves only inside a simulated bank, only through a policy gate, and only with a PIN **and** a signature from the parent's own device over the exact plan. The AI model has no payment tool. |
-| **Evidence (18 Oct)** | 227 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (153 entries) verifies |
+| **Evidence (18 Oct)** | 228 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (153 entries) verifies |
 | **Biggest open risks** | R1 tax rules not yet verified against primary sources · R8 single trust root · R15 un-hardened Ed25519 code · R20 no `Origin` check on the local server · R25 session id as a bearer token |
 | **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. |
 

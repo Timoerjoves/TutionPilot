@@ -57,6 +57,12 @@ class TestPdfText(unittest.TestCase):
         content = b"BT /C1 10 Tf 40 700 Td <000100020010001100120002> Tj ET"
         self.assertEqual(pdf_to_text(make_pdf(content, extra, font_dict=b"/C1 3 0 R")), "ABXYZB")
 
+    def test_embedded_font_program_is_not_read_as_text(self):
+        font = zlib.compress(b"\x00\x01BT garbage (not text) Tj ET\xff" * 3)
+        extra = (b"3 0 obj << /Length " + str(len(font)).encode() + b" /Length1 999 /Filter /FlateDecode >>\nstream\n"
+                 + font + b"\nendstream\nendobj\n")
+        self.assertEqual(pdf_to_text(make_pdf(b"BT /F1 10 Tf 40 700 Td (Invoice No: X-1) Tj ET", extra)), "Invoice No: X-1")
+
     def test_unsafe_or_unreadable_pdfs_refused(self):
         bomb = make_pdf(b"BT (x) Tj ET " + b" " * (21 * 1024 * 1024))  # compresses tiny, unpacks past 20 MB
         cases = {"not a pdf": b"hello", "too big": b"%PDF-" + b"0" * MAX_PDF_BYTES,

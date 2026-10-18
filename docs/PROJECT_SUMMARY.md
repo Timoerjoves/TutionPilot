@@ -65,7 +65,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 - A landing page and a calmer, minimal interface.
 
 **Numbers (18 Oct 2026):**
-- 227 tests pass.
+- 228 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
 - The demo audit chain has 153 entries and verifies.

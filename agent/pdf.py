@@ -24,6 +24,8 @@ TOKEN = re.compile(rb"\((?:\\.|[^\\()]|\((?:\\.|[^\\()])*\))*\)"   # literal str
                    rb"|[-+]?(?:\d+\.?\d*|\.\d+)|[A-Za-z'\"*]+")     # number, operator
 ESC = re.compile(rb"\\([nrtbf()\\]|[0-7]{1,3}|\r?\n)")
 ESCAPES = {b"n": b"\n", b"r": b"\r", b"t": b"\t", b"b": b"\b", b"f": b"\f"}
+# embedded font programs and images are binary and can contain the bytes "BT" by chance: never read them as text
+NOT_TEXT = re.compile(rb"/Length[123]\b|/Subtype\s*/(?:Type1C|CIDFontType0C|OpenType|Image)\b")
 
 
 class PdfError(ValueError):
@@ -42,7 +44,7 @@ def pdf_to_text(data):
     fonts = _fonts(objs)
     lines = []
     for body, stream in objs.values():
-        if stream and b"BT" in stream and b"begincmap" not in stream:
+        if stream and b"BT" in stream and b"begincmap" not in stream and not NOT_TEXT.search(body):
             lines += _lines(stream, fonts)
     text = "\n".join(l for l in lines if l.strip())
     if not text.strip():

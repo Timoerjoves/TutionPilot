@@ -3,7 +3,7 @@
 Version 0.4, 18 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (18 Oct 2026):** 227 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
+**At a glance (18 Oct 2026):** 228 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -269,7 +269,7 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
 
 **Results on 18 Oct 2026:**
-- 227 tests pass.
+- 228 tests pass.
 - 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
 - The attack lab stops 16 of 16 attacks.
 - The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.

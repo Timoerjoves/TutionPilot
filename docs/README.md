@@ -2,11 +2,13 @@
 
 | Document | What it is |
 |---|---|
+| [../SUBMISSION.md](../SUBMISSION.md) | **Start here:** the six official deliverables (Appendix 2) and where each one is |
 | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | One-page idea summary: problem, idea, what is built, why it scores, limits |
 | [team/TEAM_PLAN.md](team/TEAM_PLAN.md) | Team plan (Plan v2) with owners, dues and status on 17 Oct; scenarios; official deliverables |
 | [../TODO.md](../TODO.md) | What is left before the first and final submission |
-| [presentation/PRESENTATION.md](presentation/PRESENTATION.md) | The 8-slide deck: link, outline, timings, slide sources |
-| [TECHNICAL.md](TECHNICAL.md) | Technical documentation: architecture, algorithms, signatures, finance audit (official deliverable) |
+| [presentation/PRESENTATION.md](presentation/PRESENTATION.md) | The judges' 10-slide deck (PPTX and PDF), outline, timings; the 9-slide web deck and its sources |
+| [TECHNICAL.md](TECHNICAL.md) | Technical documentation: architecture, algorithms, security design, finance audit (official deliverable) |
+| [architecture.png](architecture.png) / [architecture.svg](architecture.svg) | The architecture diagram used in the technical documentation and the deck |
 | [SECURITY_SELF_ASSESSMENT.md](SECURITY_SELF_ASSESSMENT.md) | Permission tiers, controls, attack tests, known-risk list (official deliverable) |
 | [CONTRACT.md](CONTRACT.md) | Interface contract v1.1: the messages between the parts, and the signatures |
 | [DEMO_SCRIPT.md](DEMO_SCRIPT.md) | Demo video script (4 minutes) |

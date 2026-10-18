@@ -16,6 +16,7 @@ Parents and students sign in **without passwords**: each device signs a one-time
 > Synthetic data only. No real money. Not tax advice. Not RBI-approved. Tax rules marked "unverified" are flagged in every output.
 
 **Start here:**
+- [Submission index](SUBMISSION.md): the six official deliverables and where each one is.
 - [Project summary](docs/PROJECT_SUMMARY.md): the idea on one page.
 - [To do](TODO.md): what is left before submission.
 - [Team plan and status](docs/team/TEAM_PLAN.md).
@@ -57,7 +58,7 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
 12. Sign in as a **Student** on an approved device: a student can review everything but never sign or pay.
 
 ## Tests and evidence
-    python -m unittest discover -s tests -t . -v      # 227 tests
+    python -m unittest discover -s tests -t . -v      # 228 tests
     python -m scenarios.runner                         # 27 scenarios -> data/evidence/scenario_results.md
     python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log of 153 entries, model log)
     python -m app.audit verify data/evidence/demo/audit_log.jsonl
@@ -101,7 +102,7 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 | `contract/` | Shared message shapes, validation, plan hash |
 | `scenarios/` | The 27-scenario runner and synthetic fixtures |
 | `data/` | Sample messages, signed sample invoices, drag-and-drop test invoices (`data/invoices/upload/`), trust root and certificates (`data/trust/`), evidence |
-| `tests/` | 227 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
+| `tests/` | 228 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
 | `docs/` | Contract, technical docs, security self-assessment, demo script |
 
 ## Licences
