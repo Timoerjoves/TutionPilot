@@ -58,7 +58,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 | 27 scripted scenarios + evidence logs | `scenarios/`, `data/evidence/` |
 
 **Numbers (17 Oct 2026):**
-- 156 tests pass.
+- 203 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
 - The demo audit chain has 108 entries and verifies.

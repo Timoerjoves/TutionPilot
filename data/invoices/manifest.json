@@ -1,0 +1,77 @@
+[
+  {
+    "file": "INV-01-us-clean",
+    "context": {
+      "prior_lrs_usd": "0",
+      "prior_lrs_inr": "0",
+      "funding": "self"
+    },
+    "expect": {
+      "contract_valid": true,
+      "payee_verified": true,
+      "within_lrs_cap": true,
+      "agent_should": "Proceed: compare routes, draft A2, ask for approval"
+    }
+  },
+  {
+    "file": "INV-02-uk-gbp",
+    "context": {
+      "prior_lrs_usd": "5000",
+      "prior_lrs_inr": "450000",
+      "funding": "self"
+    },
+    "expect": {
+      "contract_valid": true,
+      "payee_verified": true,
+      "within_lrs_cap": true,
+      "agent_should": "Proceed in GBP; prior Rs 4.5 lakh this year uses up part of the TCS threshold"
+    }
+  },
+  {
+    "file": "INV-03-bank-mismatch",
+    "context": {
+      "prior_lrs_usd": "0",
+      "prior_lrs_inr": "0",
+      "funding": "self"
+    },
+    "expect": {
+      "contract_valid": true,
+      "payee_verified": false,
+      "within_lrs_cap": true,
+      "agent_should": "BLOCK (T4): bank details do not match the registry; warn the parent; no payment"
+    }
+  },
+  {
+    "file": "INV-04-missing-due-date",
+    "context": {
+      "prior_lrs_usd": "0",
+      "prior_lrs_inr": "0",
+      "funding": "self"
+    },
+    "expect": {
+      "contract_valid": false,
+      "missing": [
+        "due_on"
+      ],
+      "payee_verified": true,
+      "within_lrs_cap": true,
+      "agent_should": "ASK a clarification question: when is this due? Do not guess a date"
+    }
+  },
+  {
+    "file": "INV-05-over-lrs-cap",
+    "context": {
+      "prior_lrs_usd": "195000",
+      "prior_lrs_inr": "17550000",
+      "funding": "self",
+      "why": "Family already sent USD 195,000 under LRS this financial year (property abroad)"
+    },
+    "expect": {
+      "contract_valid": true,
+      "payee_verified": true,
+      "within_lrs_cap": false,
+      "lrs_headroom_usd": "55000",
+      "agent_should": "STOP: USD 72,000 exceeds remaining LRS headroom of USD 55,000; explain options, never raise limits (T4)"
+    }
+  }
+]

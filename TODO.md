@@ -17,6 +17,12 @@
 
 ## Before the first submission (Sun 18 night)
 - [ ] Both: walk through the app end to end (genuine invoice → sign → receipt; then every attack sample and the attack lab).
+- [ ] Nishanth: fix the two security findings from the 17 Oct audit (`docs/SECURITY_SELF_ASSESSMENT.md`):
+  - R19 (High): the PIN alone can register a new signing key. Enrol the first device only; later devices need a signature from a registered key; refuse PIN checks while frozen.
+  - R20 (Medium): `app/server.py` should check `Host`/`Origin` and require JSON.
+- [ ] Nishanth: small hand-offs from SPEC.md (Chandan already added `remember_name` for the remitter name and the unmasking of the extracted invoice in `agent/agent.py`):
+  - Optionally switch `_compute` to `rules.explain.compare_quotes()`.
+  - Optionally show each line's new `source` in the UI (e.g. as a tooltip).
 - [ ] Nishanth: review slides 2 and 6 of the deck ([docs/presentation/PRESENTATION.md](docs/presentation/PRESENTATION.md)).
 - [ ] Chandan: export the deck as PPTX or PDF into `docs/presentation/`.
 - [ ] Decide repo visibility for judges (public link, or share access) and check that GitHub Actions runs green.

@@ -159,7 +159,8 @@ The full self-assessment and known-risk list are in [SECURITY_SELF_ASSESSMENT.md
 
 ### 4.2 Masking and the "what the model saw" log
 `prepare_for_model()` is the only route to the model:
-1. It replaces PAN, Aadhaar, passport, account, email and phone values with tokens such as `<PAN_1>`.
+1. It replaces person names with tokens such as `<NAME_1>`. A name counts when it follows a label like `Student:` or `Parent:`, or was masked before, or was passed to `remember_name()`. University names stay visible.
+   It also replaces PAN, Aadhaar, passport, account, email and phone values with tokens such as `<PAN_1>`.
 2. It checks that nothing raw is left.
 3. It appends the masked text to `ModelSawLog`.
 
@@ -237,7 +238,8 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_finance_audit.py` | 400-case property checks: TCS against an independent formula, split payments, totals, ranking, LRS, financial year |
 | `test_signing.py` | Ed25519 (RFC 8032 vectors, browser WebCrypto signature), trust chain, revocation, signed approvals |
 | `test_app.py` | Invoice reader, signed invoices, sandbox bank, policy engine, audit log, agent flow |
-| `test_server.py` | Web server: static files, security headers, full payment over HTTP |
+| `test_server.py` | Web server: pages, security headers, sign-in and a full payment over HTTP |
+| `test_family.py` | Device enrolment, challenge sign-in (replay, expiry, wrong key), locked roles, vault sharing rules |
 
 ## 6. App, agent and sandbox
 
@@ -256,7 +258,7 @@ python -m app.server                              # the app at http://127.0.0.1:
   - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
   - Changing the route or the plan voids the approval.
   - The receipt records masked inputs, rules used and their versions, the approval, the plan hash, the transaction and its audit-entry hash.
-- **UI** (`app/static/`): plain HTML, CSS and JavaScript with three screens, an explain panel, a parent/student switch, consent, delete-my-data and a settings drawer.
+- **UI** (`app/static/`): plain HTML, CSS and JavaScript with three screens, an explain panel, consent, delete-my-data and a settings drawer. A landing page (`/`) and a passwordless sign-in page (`/signin`) come first: each parent or student device enrols once with the parent's PIN and then signs a one-time server challenge to sign in (`app/family.py`). A family vault (`/app` → Family vault) encrypts documents in the browser so the server holds ciphertext only.
   - Every value is HTML-escaped.
   - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
 

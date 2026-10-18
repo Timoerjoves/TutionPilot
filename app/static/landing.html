@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TuitionPilot · Pay tuition abroad</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233563c9'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='700' fill='white' text-anchor='middle'%3Etp%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="site">
+  <header class="site-nav">
+    <a class="wordmark" href="/" aria-label="TuitionPilot home">tuition<b>pilot</b></a>
+    <nav class="site-links" aria-label="Sections">
+      <a href="#how">How it works</a><a href="#security">Security</a><a href="#family">For families</a>
+    </nav>
+    <a class="btn primary" href="/signin">Sign in</a>
+  </header>
+
+  <main>
+    <section class="hero-site">
+      <div class="hero-copy">
+        <div class="eyebrow">Cross-border student finance</div>
+        <h1 class="display"><b>Pay tuition abroad.</b><br>Know every rupee before it moves.</h1>
+        <p class="lead">An AI agent that checks the invoice, finds the cheapest legal route and waits for a parent's signature.</p>
+        <div class="row" style="margin-top:26px">
+          <a class="btn primary big" href="/signin">Get started</a>
+          <a class="btn big ghost" href="#how">See how it works</a>
+        </div>
+        <p class="faint small" style="margin-top:18px">Sandbox demo · synthetic data · not tax advice
+          <button type="button" class="i-btn" data-tip="Built for the 2026 Shenzhen FinTechathon (Topic C). Payments run in a simulated bank; no real money moves. Not RBI-approved." aria-label="About this demo">i</button></p>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="mock mock-main">
+          <div class="row between"><span class="eyebrow">Invoice</span><span class="badge ok">✓ Signature verified</span></div>
+          <div class="mock-amount">USD 20,000</div>
+          <div class="muted small">Northbridge University · due 15 Nov</div>
+          <div class="mock-bars">
+            <div><span>Provider B</span><i style="--w:62%"></i><b>Rs 18,47,200</b></div>
+            <div><span>Provider C</span><i style="--w:78%"></i><b>Rs 18,48,529</b></div>
+            <div><span>Provider A</span><i style="--w:92%"></i><b>Rs 18,52,000</b></div>
+          </div>
+        </div>
+        <div class="mock mock-float mock-a"><span class="dot ok"></span><span><b>Parent signed</b><br><span class="muted tiny">ed25519 · this device</span></span></div>
+        <div class="mock mock-float mock-b"><span class="dot warn"></span><span><b>Hidden markup found</b><br><span class="muted tiny">Rs 4,000 inside the rate</span></span></div>
+      </div>
+    </section>
+
+    <section class="band" id="how">
+      <div class="eyebrow">How it works</div>
+      <h2 class="section-title"><b>Four steps.</b> Nothing moves without you.</h2>
+      <ol class="flow">
+        <li><span class="flow-n">1</span><b>Read &amp; verify</b><span class="muted small">The university's signature is checked</span>
+          <button type="button" class="i-btn" data-tip="The agent trusts one root key. It checks the university's certificate, the revocation list and the invoice signature, and that the printed text matches what was signed." aria-label="More">i</button></li>
+        <li><span class="flow-n">2</span><b>Compute</b><span class="muted small">LRS limit, TCS and landed cost</span>
+          <button type="button" class="i-btn" data-tip="Tested code computes every number from a versioned rule pack, with a source and date for each rule. The AI only explains." aria-label="More">i</button></li>
+        <li><span class="flow-n">3</span><b>Compare</b><span class="muted small">Every route, every hidden fee</span>
+          <button type="button" class="i-btn" data-tip="Each route is measured against the mid-market rate, so markups hidden inside the exchange rate show up as rupees." aria-label="More">i</button></li>
+        <li><span class="flow-n">4</span><b>Parent signs</b><span class="muted small">PIN + device key, then sandbox pay</span>
+          <button type="button" class="i-btn" data-tip="The parent's device signs the exact plan. If anything changes after signing, even one rupee, the signature no longer matches and the payment is refused." aria-label="More">i</button></li>
+      </ol>
+    </section>
+
+    <section class="band" id="security">
+      <div class="eyebrow">Security</div>
+      <h2 class="section-title"><b>Keys, not passwords.</b> Built to be attacked.</h2>
+      <div class="sec-grid">
+        <div class="sec"><b>Passwordless sign-in</b><span class="muted small">Your device proves itself with a key</span>
+          <button type="button" class="i-btn" data-tip="The server sends a one-time challenge; your browser signs it with a private key that never leaves the device. No password exists to steal or phish." aria-label="More">i</button></div>
+        <div class="sec"><b>Encrypted family vault</b><span class="muted small">The server stores only ciphertext</span>
+          <button type="button" class="i-btn" data-tip="Files are encrypted in the browser and locked to each family device's public key. Only those devices can open them; the server cannot." aria-label="More">i</button></div>
+        <div class="sec"><b>Masked AI</b><span class="muted small">PAN and accounts become tokens</span>
+          <button type="button" class="i-btn" data-tip="Identifiers are replaced with tokens before any AI sees text, and you can see exactly what it saw." aria-label="More">i</button></div>
+        <div class="sec"><b>Permission tiers</b><span class="muted small">Some actions are never allowed</span>
+          <button type="button" class="i-btn" data-tip="T0 read · T1 compute · T2 save/share with approval · T3 sandbox payment with PIN and device signature · T4 never: unverified payee, new payee, raising limits, skipping approval." aria-label="More">i</button></div>
+        <div class="sec"><b>Tamper-evident log</b><span class="muted small">Every step is hash-chained</span>
+          <button type="button" class="i-btn" data-tip="Each audit entry includes the hash of the one before, so editing any past entry breaks the chain." aria-label="More">i</button></div>
+        <div class="sec"><b>Attack lab</b><span class="muted small">Try to break it yourself</span>
+          <button type="button" class="i-btn" data-tip="Prompt injection, changed bank details, look-alike universities, revoked keys and plan tampering each run against a separate copy of the agent." aria-label="More">i</button></div>
+      </div>
+    </section>
+
+    <section class="band" id="family">
+      <div class="eyebrow">For families</div>
+      <h2 class="section-title"><b>One account per device.</b> Each with its own role.</h2>
+      <div class="grid-2 family">
+        <div class="card"><h3>Parents</h3><p class="muted small">Approve and pay. Manage limits and devices.</p>
+          <ul class="ticks"><li>Sign payment plans with the PIN</li><li>Enrol the student's device</li><li>Share documents with the student</li></ul></div>
+        <div class="card"><h3>Students</h3><p class="muted small">See everything. Pay nothing.</p>
+          <ul class="ticks"><li>Follow the payment step by step</li><li>Upload admission letters for parents</li><li>Can never approve or change limits</li></ul></div>
+      </div>
+      <div class="cta card">
+        <h2 class="section-title" style="margin:0"><b>Ready when the invoice is.</b></h2>
+        <a class="btn primary big" href="/signin">Sign in</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">2026 Shenzhen FinTechathon · Topic C · Synthetic data only, sandbox bank only, not tax advice, not RBI-approved.</footer>
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+  <script src="common.js"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@ We list what is built and what is still weak. Nothing here handles real money or
 | Asset | Why it matters | Where |
 |---|---|---|
 | Money movement | A wrong or induced payment is the worst outcome | Sandbox bank only; no real bank connection exists |
-| Personal identifiers (PAN, passport, Aadhaar, account) | Identity theft, privacy law | Masked before any model call; PAN kept only as a token |
+| Personal identifiers (names, PAN, passport, Aadhaar, account) | Identity theft, privacy law | Masked before any model call; PAN kept only as a token |
 | Tax and limit numbers | Wrong TCS or LRS advice costs families money | Rules engine with sourced, versioned rule pack |
 | Approvals | A forged or stale approval could release a payment | Approval bound to plan hash; PIN for payments |
 | Audit trail | Evidence and tamper detection | Hash-chained audit log with a verify command |
@@ -35,7 +35,7 @@ Key properties:
 
 | Control | Code | Tests |
 |---|---|---|
-| Masking before any model call | `security/masking.py: Masker, prepare_for_model` | `test_security.py`, AT6 / D1 |
+| Masking before any model call | `security/masking.py: Masker, prepare_for_model` | `test_security.py`, `test_masking.py`, AT6 / D1 |
 | "What the model saw" log refuses raw identifiers | `ModelSawLog.record` raises `LeakError` | `test_security.py` |
 | Untrusted-text scanner (injection, auto-approve, escalation, payee change, data extraction, pressure) | `security/guard.py: scan` | AT1, AT2, AT4, AT5, AT7 |
 | University signature chain: root → certificate (bank account) → signed invoice; revocation list | `security/pki.py`, `security/ed25519.py` | C2, B3, C9, `test_signing.py` |
@@ -46,6 +46,10 @@ Key properties:
 | Payments run once per approval; bank refuses expired quotes, unverified payees and overdrafts | `app/sandbox.py` | B5, `test_app.py` |
 | Hash-chained audit log + verify command | `app/audit.py` | C6, `test_app.py` |
 | Consent before any data is read; delete-my-data | `agent/agent.py` | D2, `test_app.py` |
+| Passwordless sign-in: the device signs a one-time, 2-minute server challenge (domain-separated from approvals); replay, expired, wrong-key and unenrolled attempts refused and logged | `app/family.py: Family.sign_in`, `app/static/common.js: signInWith` | `test_family.py`, `test_server.py` |
+| Roles fixed at sign-in: a student or guest session can never act as the parent; guests get a student view | `agent/agent.py: set_role`, `app/server.py` | `test_family.py`, `test_server.py` |
+| Only parent devices can sign approvals; student devices can sign in and use the vault only | `app/policy.py: register_parent_key / register_student_key` | `test_family.py` |
+| Encrypted family vault: AES-256-GCM per file, file key wrapped per device with X25519 + HKDF; the server stores ciphertext only and hands each device only its own wrapped key; file name bound as AAD | `app/static/app.js: uploadDoc, openDoc`, `app/family.py: put, get_for` | `test_family.py` (server rules); browser round-trip checked 18 Oct |
 | Web server hardening | `app/server.py`, `app/static/app.js` | `test_server.py` |
 | Sourced, versioned rules; unverified rules flagged | `rulepack/`, `rules/engine.py` trace | `test_rules.py` |
 | Refuse dates before a rule took effect | `check_effective` | `test_rules.py` |
@@ -56,7 +60,8 @@ Web server hardening covers:
 - listening on 127.0.0.1 only;
 - a Content-Security-Policy and `no-store` caching;
 - static-path checks;
-- a 64 KB request-body limit;
+- a 64 KB request-body limit (4 MB for a sealed vault upload; files up to 2 MB, 50 per family);
+- `403` for refused permissions, `400` for bad input;
 - HTML-escaping of every value shown.
 
 ## 4. Attack test set (8 cases)
@@ -90,7 +95,7 @@ All 27 scenarios pass in `data/evidence/scenario_results.md`. The UI's attack la
 | # | Risk | Severity | Current state | Mitigation / next step |
 |---|---|---|---|---|
 | R1 | **Tax rules not verified against primary sources.** Unverified or secondary-source rules: LRS cap; no-PAN rate; prior other purposes counting toward the threshold; TCS base excluding fees; GST rate per provider; also the threshold and education rates. | High | Flagged in every output via `needs_verification` | Check against RBI Master Direction and the Income-tax Act 2025 s.394 before the final submission |
-| R2 | **Names and addresses are not masked**, only numeric/ID identifiers | Medium | Names reach the model | Mask names from the intake form fields; synthetic data only for now |
+| R2 | **Names are masked only when labelled or already known.** A name after `Student:`, `Parent:`, `Remitter:` and similar labels is masked, and so is every later mention of a full name. The remitter name the family types is remembered too. A name that first appears in free text, a later mention of a one-word name, and addresses are not | Low | Such a name reaches the model | Mask addresses from form fields; synthetic data only for now |
 | R3 | Scanner is pattern-based: paraphrases, other languages, or images of text can slip past | Medium | First line only | The policy engine denies T4 actions whatever any text says; text never changes tiers, payees or limits |
 | R4 | Scanner false positives (e.g. a genuine "new bank details" notice from a university) | Low | Blocks and asks | A real change of bank account needs a new root-issued certificate, not a message |
 | R5 | Grounding check reads digits only; numbers in words ("ten thousand") or amounts without a currency are not checked | Medium | Partial | Ask the model for structured output; show engine text by default |
@@ -107,6 +112,11 @@ All 27 scenarios pass in `data/evidence/scenario_results.md`. The UI's attack la
 | R12 | One shared policy and sandbox for the whole server; sessions are in memory only | Low (demo) | Suits a one-family demo | Per-family policy and storage |
 | R13 | The audit log is tamper-evident, not tamper-proof: someone who can rewrite the whole file can rebuild the chain | Medium | Head hash shown in the UI and the receipt | Anchor the head hash outside the system (for example in the receipt sent to the parent) |
 | R14 | The model adapter is an offline stand-in; a hosted model would add its own risks (prompt injection through extraction, data residency) | Medium | Hosted model not connected | Keep masking, grounding and the policy gate in front of any hosted model |
+| R19 | **The PIN alone can register a new parent signing key** (`/api/parent_key` and the sign-in page's `/api/devices`), so someone who knows the PIN can enrol their own device and sign a payment. The PIN is still checked while the circuit breaker is frozen, and the right PIN resets it | High | Found in the 17 Oct audit; not fixed yet | Enrol the first device only; later devices need a signature from a registered key; refuse PIN checks while frozen; add backoff |
+| R20 | The local server does not check `Origin`, `Host` or `Content-Type`, so a web page open in the same browser can send requests to it (CSRF, DNS rebinding), including the demo tamper endpoints | Medium | Server listens on 127.0.0.1 only | Accept only same-origin requests to `127.0.0.1`/`localhost` with JSON bodies; put demo tamper endpoints behind a `--demo` flag |
+| R21 | A negative `Content-Length` hangs a server thread, and there is no socket timeout | Low | Local demo only | Reject a length < 0, set a request timeout, require a JSON object body |
+| R22 | The sandbox detects duplicates by approval id only. A second, separately signed approval of the same plan could pay twice if `SandboxBank.execute` is called directly | Low | The agent refuses a second payment of the same plan in a session (`agent.pay`) | Record paid plan hashes in the bank and refuse repeats |
+| R23 | `model.explain()` is not routed through `prepare_for_model`. It only ever receives text the engine wrote (no personal data), but it is not logged as "what the model saw" | Low | By design for now | Route it through `prepare_for_model` before connecting a hosted model |
 
 ## 6. Privacy
 - **Synthetic data only:** no real names, PANs, passports or bank details anywhere in the repo. `.gitignore` blocks `private/` and `*.passport.*`.
@@ -121,3 +131,6 @@ All 27 scenarios pass in `data/evidence/scenario_results.md`. The UI's attack la
 - "Not RBI-approved"
 - "Draft only: not an official RBI or bank form"
 - an "unverified" tag on every number that relies on an unverified rule.
+| R24 | A vault file is locked only to the devices enrolled when it was uploaded. A device enrolled later cannot open older files, and a family that loses every device holding a file's key loses the file | Medium | By design: the server can never unlock a file | Re-share from a device that can open it; add a parent recovery key kept offline |
+| R25 | A session id (48 bits, no expiry) in `localStorage` is the bearer token after sign-in; anyone who copies it acts as that session until sign-out | Medium | Local demo only; sign-out deletes the session on the server | HttpOnly, SameSite cookie with a longer random token and an idle timeout |
+| R26 | For the demo one browser can hold both a parent and a student key, so whoever uses that browser can sign in as either | Low (demo) | Real families enrol separate devices | Enrol each role on its own device; allow one role per browser profile |

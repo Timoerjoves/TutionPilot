@@ -51,21 +51,29 @@ class Policy:
         self.denied_in_a_row = 0
         self.frozen = False
         self.parent_keys = {}  # key_id -> public key (base64). Private keys never leave the parent's device.
+        self.student_keys = {}  # student devices: may sign in and use the vault, never approve a payment
 
     # ----- PIN and settings (the only way limits change) -----
     def register_parent_key(self, pin, public_key_b64, label="parent device"):
+        return self._register_key(pin, public_key_b64, label, self.parent_keys, "Parent")
+
+    def register_student_key(self, pin, public_key_b64, label="student device"):
+        return self._register_key(pin, public_key_b64, label, self.student_keys, "Student")
+
+    def _register_key(self, pin, public_key_b64, label, keys, who):
+        action = f"register_{who.lower()}_key"
         if not self.verify_pin(pin):
             self._count_denial("T4")
-            return Decision(False, "register_parent_key", "T4", "bad_pin", "Wrong PIN: device not registered.")
+            return Decision(False, action, "T4", "bad_pin", "Wrong PIN: device not registered.")
         try:
             raw = b64d(public_key_b64)
         except (ValueError, TypeError):
             raw = b""
         if len(raw) != 32:
-            return Decision(False, "register_parent_key", "T2", "bad_key", "That is not an Ed25519 public key.")
+            return Decision(False, action, "T2", "bad_key", "That is not an Ed25519 public key.")
         kid = key_id(raw)
-        self.parent_keys[kid] = public_key_b64
-        return Decision(True, "register_parent_key", "T2", "ok", f"Parent signing key {kid} registered ({label}).")
+        keys[kid] = public_key_b64
+        return Decision(True, action, "T2", "ok", f"{who} signing key {kid} registered ({label}).")
 
     def verify_pin(self, pin):
         return pin is not None and hmac.compare_digest(_hash_pin(pin, self._salt), self._pin_hash)
@@ -89,6 +97,7 @@ class Policy:
     def status(self):
         return {"per_payment_cap_usd": str(self.per_payment_cap_usd), "emergency_stop": self.emergency_stop,
                 "parent_keys": sorted(self.parent_keys),
+                "student_keys": sorted(self.student_keys),
                 "frozen": self.frozen, "denied_in_a_row": self.denied_in_a_row,
                 "breaker_threshold": self.breaker_threshold}
 

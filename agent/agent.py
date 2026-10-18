@@ -15,6 +15,7 @@ from pathlib import Path
 
 import corridors
 from app.audit import AuditLog
+from app.family import Family
 from app.policy import Policy
 from app.sandbox import IST, BankError, SandboxBank
 from contract import ContractError, landed_cost_result, lrs_result, plan_hash, validate
@@ -25,7 +26,7 @@ from rules.explain import explain_comparison, explain_markup, inr, tcs_sentence
 from security import Masker, ModelSawLog, ground_or_replace, prepare_for_model, scan
 from security.pki import TrustStore, verify_approval, split as split_signed
 
-from .model import OfflineModel, _date
+from .model import OfflineModel, _date, json_to_text
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = json.loads((ROOT / "app" / "demo_config.json").read_text(encoding="utf-8"))
@@ -110,6 +111,7 @@ class Agent:
         self.audit = AuditLog(ev and ev / "audit_log.jsonl")
         self.model_saw = ModelSawLog(ev and ev / "model_saw.log")
         self.model = OfflineModel()
+        self.family = Family(self.policy)
         self.sessions = {}
 
     # ---------- sessions ----------
@@ -117,12 +119,14 @@ class Agent:
         sid = uuid.uuid4().hex[:12]
         self.sessions[sid] = {
             "id": sid, "role": role if role in ("parent", "student") else "parent", "consent": False,
+            "device": None,  # key_id of the enrolled device that signed in; None for sessions made in code
             "masker": Masker(), "invoice": None, "uncertain": [], "invoice_scan": None, "trust": None, "payee_certificate": None,
             "answers": {}, "documents": set(), "quotes": [], "chosen_quote_id": None, "ranked": None,
             "plan": None, "plan_seq": 0, "approval": None, "txn": None, "receipt": None,
             "chat": [], "model_saw": [], "flags": [], "escalations": [], "lrs": None, "draft": None,
             "ytd": YTDTracker(), "prior_used": None, "warnings": [],
         }
+        self.sessions[sid]["signed_in"] = self.sessions[sid]["role"]  # the most this session may act as
         self._log("session_started", {"role": self.sessions[sid]["role"]}, sid)
         self._say(self.sessions[sid], "agent", "Hello! I help you pay university tuition abroad, step by step. "
                   "First, please read and accept how your data is used.")
@@ -156,6 +160,8 @@ class Agent:
         s = self.get(sid)
         if role not in ("parent", "student"):
             raise ValueError("role must be parent or student")
+        if role == "parent" and s["signed_in"] != "parent":
+            raise PermissionError("Sign in on a parent device to act as the parent.")
         s["role"] = role
         self._log("role_switched", {"role": role}, sid)
         return s
@@ -181,10 +187,15 @@ class Agent:
             raise ValueError("invoice text is empty")
         self._reset_from_invoice(s)
         self._log("tool_call", {"tool": "read_invoice", "tier": "T0"}, sid)
-        visible, signed, damaged = split_signed(text)
+        if text.lstrip()[:1] in ("{", "["):  # a JSON invoice file; a signed one carries its own attestation
+            visible, obj = json_to_text(text)
+            signed, damaged = (obj if "attestation" in obj else None), None
+        else:
+            visible, signed, damaged = split_signed(text)
         s["invoice_scan"] = scan(visible)
         masked = self._to_model(s, "extract_invoice", visible)
         inv, uncertain = self.model.extract(masked)
+        inv = s["masker"].unmask_obj(inv)  # the model saw tokens; the family's draft shows the real names
         s["invoice"], s["uncertain"] = inv, uncertain
         self._say(s, "user", f"Uploaded invoice {inv.get('invoice_id', '(no number)')}.")
         self._verify_invoice(s, signed, damaged)
@@ -314,6 +325,9 @@ class Agent:
                 if not re.fullmatch(r"[A-Za-z]{5}[0-9]{4}[A-Za-z]", value):
                     return "That doesn't look like a PAN (5 letters, 4 digits, 1 letter). Try again or choose 'No PAN'."
                 a["pan"] = s["masker"].mask(value.upper())  # keep only the token
+        elif field == "remitter_name":
+            s["masker"].remember_name(value)  # so the name is masked if it comes up later in chat
+            a[field] = value
         elif field in ("prior_inr", "prior_usd"):
             n = parse_amount(value)
             if n is None or n < 0:
@@ -592,6 +606,45 @@ class Agent:
         self._log("plan_built", {"plan_id": plan["plan_id"], "plan_hash": plan["plan_hash"],
                                  "max_tier": plan["max_tier"]}, s["id"])
 
+    # ---------- devices, sign-in, vault ----------
+    def register_device(self, pin, role, public_key, box_key, label=""):
+        d = self.family.register(pin, role, public_key, box_key, label)
+        self._log("device_registered" if d.allowed else "device_refused", {**d.to_dict(), "role": role})
+        return d
+
+    def sign_in(self, nonce, kid, signature):
+        """A new session for the device that signed the server's one-time challenge."""
+        try:
+            role, kid = self.family.sign_in(nonce, kid, signature)
+        except PermissionError as e:
+            self._log("sign_in_refused", {"key_id": str(kid)[:40], "reason": str(e)})
+            raise
+        s = self.new_session(role)
+        s["device"] = kid
+        self._log("signed_in", {"role": role, "key_id": kid}, s["id"])
+        return s
+
+    def _device(self, s):
+        if not s["device"]:
+            raise PermissionError("Sign in with an enrolled device to use the vault.")
+        return s["device"]
+
+    def vault_put(self, sid, doc):
+        s = self.get(sid)
+        meta = self.family.put(self._device(s), doc or {})
+        self._log("vault_upload", {"doc_id": meta["doc_id"], "size": meta["size"], "shared_with": meta["shared_with"]}, sid)
+        return meta
+
+    def vault_list(self, sid):
+        s = self.get(sid)
+        return self.family.list_for(self._device(s))
+
+    def vault_get(self, sid, doc_id):
+        s = self.get(sid)
+        doc = self.family.get_for(self._device(s), doc_id)
+        self._log("vault_open", {"doc_id": doc_id, "note": "ciphertext sent; only this device can decrypt"}, sid)
+        return doc
+
     # ---------- stage 8-11: policy gate, approve, execute, record ----------
     def register_parent_key(self, pin, public_key_b64, label="parent device"):
         """Enrol the parent's device key (made and kept on the device). Needs the PIN."""
@@ -767,7 +820,7 @@ class Agent:
         if s["ranked"]:
             ranked = [{k: v for k, v in r.items() if k != "cost"} for r in s["ranked"]]
         return jsonable({
-            "id": s["id"], "role": s["role"], "consent": s["consent"],
+            "id": s["id"], "role": s["role"], "consent": s["consent"], "signed_in": s["signed_in"], "device": s["device"],
             "invoice": s["invoice"], "uncertain": s["uncertain"], "invoice_scan": s["invoice_scan"],
             "trust": s["trust"] and {k: v for k, v in s["trust"].items() if k != "certificate"},
             "question": self.pending_question(s), "chat": s["chat"], "flags": s["flags"],

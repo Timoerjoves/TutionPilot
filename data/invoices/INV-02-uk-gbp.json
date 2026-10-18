@@ -1,0 +1,25 @@
+{
+  "type": "invoice",
+  "contract_version": "1.0",
+  "invoice_id": "KU-26-554210",
+  "issued_on": "2026-09-20",
+  "due_on": "2026-12-01",
+  "payee": {
+    "name": "Kingsford University (synthetic)",
+    "registry_id": "PAYEE-UK-0003",
+    "country": "GB",
+    "bank": {
+      "account_masked": "XXXX-XXXX-7713",
+      "swift": "SYNTGB2L"
+    }
+  },
+  "student": {
+    "name": "Rohan Student (synthetic)",
+    "student_id": "KU-2026-0388"
+  },
+  "amount": {
+    "value": "13900.00",
+    "currency": "GBP"
+  },
+  "purpose": "education"
+}

@@ -14,7 +14,7 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 |---|---|---|---|---|---|---|
 | 1 | Task completion | Rules engine with tests (LRS cap, TCS cases, landed cost) | Chandan | Sat 17 | ✅ Done | `rules/engine.py`, `tests/test_rules.py`, `tests/test_finance_audit.py` |
 | 2 | Task completion | Year-to-date tracker across all LRS purposes | Chandan | Sat 17 | ✅ Done, and the agent now uses it | `rules/engine.py: YTDTracker` |
-| 3 | Task completion | Route comparison with line-by-line explanation | Chandan | Sat 17 | ✅ Done | `rules/explain.py` |
+| 3 | Task completion | Route comparison with line-by-line explanation | Chandan | Sat 17 | ✅ Done; every line now has a source, and `compare_quotes()` takes an invoice + 2–4 quotes | `rules/explain.py`, `tests/test_route_lines.py` |
 | 4 | Task completion | Sandbox bank and ledger | Nishanth | Sat 17 | ✅ First version | `app/sandbox.py` |
 | 5 | Task completion | Multi-step plan with clarification questions | Nishanth | Sun 18 | ✅ First version | `agent/agent.py` |
 | 6 | Task completion | Invoice extraction and payee check | Nishanth | Sat 17 | ✅ Done; payee check is now **signature-based** | `agent/model.py`, `security/pki.py` |
@@ -27,7 +27,7 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 | 13 | Compliance | Consent screen and delete-my-data | Nishanth | Mon 19 | ✅ First version | UI step 1, footer |
 | 14 | Compliance | Corridor as a config file (USA, UK) | Chandan | Mon 19 | ✅ Done | `corridors/` |
 | 15 | Security | Permission tiers T0–T4 in a policy engine | Nishanth | Sat 17 | ✅ First version | `app/policy.py` |
-| 16 | Security | Masking layer plus what-the-model-saw log | Chandan | Sat 17 | ✅ Done | `security/masking.py` |
+| 16 | Security | Masking layer plus what-the-model-saw log | Chandan | Sat 17 | ✅ Done; names now masked too | `security/masking.py`, `tests/test_masking.py` |
 | 17 | Security | Attack test set of 8 cases | Chandan | Sun 18 | ✅ Done, plus 16-attack lab in the UI | `tests/test_attacks.py`, `app/lab.py` |
 | 18 | Security | Model output checked against the rules engine | Chandan | Sun 18 | ✅ Done | `security/grounding.py` |
 | 19 | Security | Approval bound to a hash of the exact plan | Nishanth | Sat 17 | ✅ Done, now **signed by the parent's device** | `security/pki.py`, `app/policy.py` |
@@ -36,7 +36,7 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 | 22 | Security | Security self-assessment | Chandan | Sun 18 | ✅ Draft v0.3 | `docs/SECURITY_SELF_ASSESSMENT.md` |
 | 23 | Innovation | Explain panel: live steps, policy decisions, rule trace | Nishanth | Mon 19 | ✅ First version ("Agent, live" panel) | `app/static/` |
 | 24 | Innovation | Decision receipt | Nishanth | Sun 18 | ✅ First version | UI step 6 |
-| 25 | Innovation | Hidden-markup explainer | Chandan | Sat 17 | ✅ Done | `rules/explain.py` |
+| 25 | Innovation | Hidden-markup explainer | Chandan | Sat 17 | ✅ Done; names its mid-market source | `rules/explain.py`, `tests/test_markup.py` |
 | 26 | Innovation | Clear screens (planned: three) | Nishanth | Sun 18 | ✅ First version: a 6-step guided story + attack lab | `app/static/` |
 | 27 | Innovation | Student and parent role switch | Nishanth | Mon 19 | ✅ First version | top bar |
 | 28 | Innovation | Loan versus savings scenarios | – | – | Dropped (unverified rule) | |

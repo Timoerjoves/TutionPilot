@@ -1,16 +1,7 @@
 "use strict";
 /* TuitionPilot UI: a guided story with a live agent panel. Plain JavaScript, no libraries.
-   Every number comes from the server's rules engine. The parent's signing key is created and kept in this
-   browser (WebCrypto Ed25519, not extractable); the server only ever receives the public key and signatures. */
+   Every number comes from the server's rules engine. Shared helpers and device keys are in common.js. */
 
-const $ = (s, el = document) => el.querySelector(s);
-const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const store = {
-  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
-  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
-};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let V = null;                         // session view from the server
@@ -18,7 +9,8 @@ let view = store.get("tp.view", "welcome");
 let side = store.get("tp.side", "live");
 let busy = false;
 let seenSeq = Number(store.get("tp.seen", "0"));
-let device = null;                    // {privateKey, publicKey, keyId} from IndexedDB
+let device = null;                    // this role's device keys from IndexedDB (see common.js)
+let vaultDocs = null;                 // vault listing for this device
 let pin = "";
 let labList = null, labResults = {};
 let wf = null, wfTimer = null;
@@ -61,18 +53,7 @@ const usd = (v) => "USD " + Math.round(Number(v)).toLocaleString("en-US");
 const tier = (t) => `<span class="tier ${esc(t)}">${esc(t)}</span>`;
 const short = (h, n = 12) => (h || "").replace(/^sha256:/, "").slice(0, n) + "…";
 
-/* ---------- crypto helpers (browser side) ---------- */
-const utf8 = (s) => new TextEncoder().encode(s);
-const b64 = (bytes) => btoa(String.fromCharCode(...bytes));
-async function sha256hex(data) {
-  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", typeof data === "string" ? utf8(data) : data));
-  return [...d].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-function canon(v) {  // same bytes as Python json.dumps(sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-  if (v === null || typeof v !== "object") return JSON.stringify(v);
-  if (Array.isArray(v)) return "[" + v.map(canon).join(",") + "]";
-  return "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}";
-}
+/* ---------- signing (browser side) ---------- */
 async function planHashHere(plan) {
   const body = { ...plan };
   delete body.plan_hash;
@@ -84,41 +65,12 @@ function isoNow() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${pad(Math.trunc(off / 60))}:${pad(off % 60)}`;
 }
 
-const idb = {
-  open() {
-    return new Promise((res, rej) => {
-      const r = indexedDB.open("tuitionpilot", 1);
-      r.onupgradeneeded = () => r.result.createObjectStore("keys");
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
-    });
-  },
-  async run(mode, fn) {
-    const db = await this.open();
-    return new Promise((res, rej) => {
-      const req = fn(db.transaction("keys", mode).objectStore("keys"));
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => rej(req.error);
-    });
-  },
-  get(k) { return this.run("readonly", (s) => s.get(k)); },
-  put(k, v) { return this.run("readwrite", (s) => s.put(v, k)); },
-  del(k) { return this.run("readwrite", (s) => s.delete(k)); },
-};
-async function loadDevice() { try { device = (await idb.get("parent")) || null; } catch { device = null; } }
 const deviceRegistered = () => device && V && V.policy.parent_keys.includes(device.keyId);
 
-async function setUpDevice(pinValue) {
-  if (!device) {
-    const kp = await crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"]);
-    const raw = new Uint8Array(await crypto.subtle.exportKey("raw", kp.publicKey));
-    device = { privateKey: kp.privateKey, publicKey: b64(raw), keyId: "ed25519:" + (await sha256hex(raw)).slice(0, 16) };
-  }
-  const r = await api("POST", "/api/parent_key", { pin: pinValue, public_key: device.publicKey, label: "this browser" });
-  if (!r.result.allowed) throw new Error(r.result.reason);
-  await idb.put("parent", device);
+async function setUpDevice(pinValue) {  // enrol this browser as a parent device (needs the PIN)
+  device = await enrolDevice("parent", pinValue, "Parent's browser");
   await refresh();
-  return r.result;
+  return { reason: `Parent device ${device.keyId} enrolled.` };
 }
 
 async function signApproval(plan) {
@@ -133,13 +85,6 @@ async function signApproval(plan) {
   return approval;
 }
 
-/* ---------- server ---------- */
-async function api(method, path, body) {
-  const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
-  return data;
-}
 async function refresh() { V = (await api("GET", `/api/session/${V.id}`)).view; }
 
 async function act(action, body = {}, { advance = true, quiet = false } = {}) {
@@ -161,16 +106,16 @@ async function act(action, body = {}, { advance = true, quiet = false } = {}) {
 }
 
 async function start() {
-  await loadDevice();
   const sid = store.get("tp.session");
   if (sid) { try { V = (await api("GET", `/api/session/${sid}`)).view; } catch { V = null; } }
-  if (!V) {
-    V = (await api("POST", "/api/session", { role: "parent" })).view;
-    store.set("tp.session", V.id);
-    seenSeq = 0;
-    view = "welcome";
-  }
+  if (!V) { location.replace("/signin"); return; }  // every session starts with a device sign-in
+  device = await loadDevice(V.role);
   render();
+}
+async function signOut() {
+  try { await api("POST", `/api/session/${V.id}/delete`); } catch { /* already gone */ }
+  store.del("tp.session"); store.del("tp.view"); store.set("tp.seen", "0");
+  location.replace("/signin");
 }
 
 function toast(msg, bad = false) {
@@ -192,7 +137,7 @@ function progressIndex() {
 }
 function autoStep() { return ["welcome", "invoice", "questions", "route", "route", "receipt"][progressIndex()]; }
 function reachable(id) {
-  if (id === "lab") return true;
+  if (id === "lab" || id === "vault") return true;
   const i = STEPS.findIndex((s) => s.id === id), p = progressIndex();
   if (id === "receipt") return !!V.receipt;
   return i <= p || (p >= 4 && i <= 4);
@@ -208,13 +153,13 @@ function go(id, rerender = true) {
 function render() {
   if (!V) return;
   if (!reachable(view)) view = autoStep();
-  $$("[data-role]").forEach((b) => b.classList.toggle("on", b.dataset.role === V.role));
   $$("[data-side]").forEach((b) => b.classList.toggle("on", b.dataset.side === side));
   const chip = $("#device-chip");
-  chip.className = "chip-status " + (deviceRegistered() ? "ok" : "warn");
-  chip.textContent = deviceRegistered() ? "🔑 Parent device ready" : "🔑 Device not set up";
+  chip.className = "chip-status " + (V.device ? "ok" : "warn");
+  chip.textContent = `${V.role === "parent" ? "Parent" : "Student"} · ${V.device ? short(V.device.replace("ed25519:", ""), 8) : "not signed in"}`;
+  chip.title = V.device ? `Signed in with device key ${V.device}` : "";
   renderRail();
-  const views = { welcome: vWelcome, invoice: vInvoice, questions: vQuestions, route: vRoute, sign: vSign, receipt: vReceipt, lab: vLab };
+  const views = { welcome: vWelcome, invoice: vInvoice, questions: vQuestions, route: vRoute, sign: vSign, receipt: vReceipt, lab: vLab, vault: vVault };
   const entering = view !== render.last;  // animate only when moving to another step, not on every update
   render.last = view;
   $("#stage").innerHTML = `<div class="view stack ${entering ? "enter" : ""}">${globalBanners()}${views[view]()}</div>`;
@@ -233,6 +178,7 @@ function renderRail() {
         <span class="step-txt"><b>${s.title}</b><small>${s.sub}</small></span></button></li>`;
   }).join("");
   $("#nav-lab").classList.toggle("cur", view === "lab");
+  $("#nav-vault").classList.toggle("cur", view === "vault");
 }
 
 function globalBanners() {
@@ -245,20 +191,19 @@ function globalBanners() {
 /* ---------- 1. welcome ---------- */
 function vWelcome() {
   return `<section class="card hero">
-    <div class="eyebrow">Cross-border student finance</div>
-    <h1 style="margin:8px 0 10px">Pay the university abroad, with every rupee explained and nothing moving without you.</h1>
-    <p class="lead">TuitionPilot reads the fee invoice, checks it was really signed by the university, works out the yearly LRS limit,
-      tax collected at source (TCS) and the true cost of each route, then pays only after a parent signs the exact plan.</p>
+    <div class="eyebrow">Make a tuition payment</div>
+    <h1 style="margin:10px 0 8px"><b>Pay tuition abroad</b> with every rupee explained.</h1>
+    <p class="lead">Nothing moves until a parent signs.${info("TuitionPilot reads the fee invoice, checks it was really signed by the university, works out the yearly LRS limit, tax collected at source (TCS) and the true cost of each route, then pays only after a parent signs the exact plan.")}</p>
     <div class="promises">
-      <div class="promise"><span class="ico">🧮</span><b>Code computes</b><span class="muted small">Every number comes from tested rules with sources. The AI only explains, and its numbers are checked.</span></div>
-      <div class="promise"><span class="ico">✍️</span><b>Everyone signs</b><span class="muted small">Universities sign invoices; the parent's device signs the plan. The agent can't change either.</span></div>
-      <div class="promise"><span class="ico">🏦</span><b>Sandbox only</b><span class="muted small">A simulated bank, synthetic data. No real money ever moves.</span></div>
+      <div class="promise"><b>Code computes${info("Every number comes from tested rules with sources. The AI only explains, and its numbers are checked.")}</b><span class="muted small">Tested rules, cited sources</span></div>
+      <div class="promise"><b>Everyone signs${info("Universities sign invoices; the parent's device signs the plan. The agent can't change either.")}</b><span class="muted small">University and parent</span></div>
+      <div class="promise"><b>Sandbox only${info("A simulated bank with synthetic data. No real money ever moves.")}</b><span class="muted small">No real money</span></div>
     </div>
     ${V.consent ? `<div class="row"><button class="btn primary big" data-go="${autoStep() === "welcome" ? "invoice" : autoStep()}">Continue →</button><span class="badge ok">Consent given</span></div>` : `
     <label class="toggle-row"><input type="checkbox" class="sr" id="c1"><span class="switch"></span>
-      <span><b>Financial data</b><br><span class="muted small">Use the invoice, the sender's details and this year's earlier payments to work out limits, tax and cost.</span></span></label>
+      <span><b>Financial data</b>${info("Use the invoice, the sender's details and this year's earlier payments to work out limits, tax and cost.")}<br><span class="muted small">Used for limits, tax and cost</span></span></label>
     <label class="toggle-row"><input type="checkbox" class="sr" id="c2"><span class="switch"></span>
-      <span><b>AI processing, masked</b><br><span class="muted small">PAN, passport, Aadhaar, account numbers, emails and phones become tokens before any AI sees text. You can see exactly what it saw.</span></span></label>
+      <span><b>AI processing, masked</b>${info("PAN, passport, Aadhaar, account numbers, emails and phones become tokens before any AI sees text. You can see exactly what it saw.")}<br><span class="muted small">Identifiers hidden from the AI</span></span></label>
     <div class="row" style="margin-top:16px"><button class="btn primary big" data-act="consent" id="consent-btn" disabled>Agree and start</button>
       <span class="muted small">You can delete your data at any time.</span></div>`}
   </section>`;
@@ -271,8 +216,8 @@ function vInvoice() {
   const picker = `<section class="card">
       <div class="row between"><h2>${V.invoice ? "Use another invoice" : "Add the university's invoice"}</h2><span class="muted small">Synthetic samples</span></div>
       <div class="drop" id="drop" style="margin:14px 0">
-        <div style="font-size:26px">📄</div><b>Drop an invoice file here</b>
-        <div class="muted small">or <label class="link" style="cursor:pointer">choose a file<input type="file" id="file" accept=".txt,text/plain" hidden></label>
+        <b>Drop an invoice file here</b>
+        <div class="muted small">or <label class="link" style="cursor:pointer">choose a file<input type="file" id="file" accept=".txt,.json,text/plain,application/json" hidden></label>
         · <button class="link" data-act="paste">paste text</button></div>
       </div>
       <h3 style="margin:6px 0 10px">Genuine invoices</h3><div class="samples">${gallery("good")}</div>
@@ -285,11 +230,10 @@ function vInvoice() {
   const f = (k, label, val) => `<div class="field" ${unc.has(k) ? 'style="border-color:var(--warn)"' : ""}><small>${esc(label)}</small><b>${val ? esc(val) : '<span class="badge warn">missing</span>'}</b></div>`;
   const chain = t.chain.map((c, i) => `<div class="link-node ${c.ok ? "ok" : "bad"}" style="animation-delay:${i * 260}ms">
       <span class="node">${c.ok ? "✓" : "✕"}</span><div><b>${esc(c.step)}</b><small>${esc(c.detail)}</small></div></div>`).join("");
-  const flags = (V.flags || []).map((x) => `<div class="banner warn"><b>⚠ Ignored instructions</b><span class="body">The ${esc(x.source)} contained text that looks like ${esc(x.categories)}. Documents can't instruct the agent.</span></div>`).join("");
+  const flags = (V.flags || []).map((x) => `<div class="banner warn"><b>⚠ Ignored instructions</b><span class="body">Found ${esc(x.categories)} in the ${esc(x.source)}.${info("Documents can't give the agent instructions, change payees or skip approval. The text was ignored and logged.")}</span></div>`).join("");
   return `<div class="grid-2">
       <section class="card">
-        <div class="row between"><h2>Signature check</h2>${t.verified ? '<span class="badge ok">✓ Verified</span>' : '<span class="badge deny">✕ Not verified</span>'}</div>
-        <p class="muted small">The agent trusts one root key, not a list. It checks every link below.</p>
+        <div class="row between"><h2>Signature check${info("The agent trusts one root key, not a list. It checks every link: root, university certificate, revocation list, invoice signature, and that the printed text matches the signed data.")}</h2>${t.verified ? '<span class="badge ok">✓ Verified</span>' : '<span class="badge deny">✕ Not verified</span>'}</div>
         <div class="chain" style="margin-top:14px">${chain}</div>
         ${t.verified ? "" : `<div class="banner deny"><b>Will not pay.</b><span class="body">${esc(t.reason || "")}. Paying an unverified payee is tier T4: never allowed.</span></div>`}
       </section>
@@ -329,7 +273,7 @@ function vQuestions() {
         <button class="btn primary">Next</button></form>
       ${q.options ? `<div class="choices" style="margin-top:10px">${q.options.map((o) => `<button class="choice" data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}`;
   return `<section class="card qcard">${dots}<div class="qtext">${esc(q.text)}</div>${hint}${choices}
-      <p class="faint tiny" style="margin-top:16px">${q.field === "pan" ? "Your PAN is masked immediately and never shown to the AI." : "The agent asks instead of guessing."}</p></section>${chat}`;
+      <p class="faint tiny" style="margin-top:16px">${q.field === "pan" ? "Masked before the AI sees it" : "Asked, never guessed"}${info(q.field === "pan" ? "Your PAN becomes a token immediately. The AI only ever sees the token, and the draft shows it partly hidden." : "When the invoice or your situation leaves a gap, the agent asks you rather than assuming an answer.")}</p></section>${chat}`;
 }
 
 /* ---------- 4. route ---------- */
@@ -371,8 +315,7 @@ function vRoute() {
         ${prior}${chosen.quote.quote_id !== best.quote.quote_id ? '<span class="badge warn">Not the cheapest: you chose this</span>' : ""}</div>
     </section>
     <section class="card">
-      <div class="row between"><h2>What you pay on top of the real exchange value</h2><button class="btn sm ghost" data-act="refresh">↻ New quotes</button></div>
-      <p class="muted small">Tap a route to choose it. The bar is everything above the mid-market value of the amount you send.</p>
+      <div class="row between"><h2>Cost above the real rate${info("Tap a route to choose it. Each bar is everything you pay above the mid-market value of the amount you send: hidden FX markup, provider fee, GST, correspondent charges and TCS.")}</h2><button class="btn sm ghost" data-act="refresh">↻ New quotes</button></div>
       <div class="chart" style="margin-top:12px">${bars}</div>
       <div class="legend" style="margin-top:12px">${Object.values(COLORS).map(([c, l]) => `<span><i style="background:var(${c})"></i>${esc(l)}</span>`).join("")}</div>
     </section>
@@ -382,7 +325,7 @@ function vRoute() {
       <section class="card">${gauge()}</section>
     </div>
     <section class="card whatif">
-      <div class="row between"><h2>What if…</h2><span class="badge info">Try it: your plan does not change</span></div>
+      <div class="row between"><h2>What if…${info("Change the inputs to see how TCS and each route's total would move. This is read-only: your plan and approval stay as they are.")}</h2><span class="badge info">Plan unchanged</span></div>
       <div class="grid-2" style="margin-top:12px">
         <div class="stack">
           <div class="ctrl"><label for="wf-prior">Already sent abroad this year: <span id="wf-prior-v" class="num"></span></label>
@@ -396,7 +339,7 @@ function vRoute() {
     <details class="more"><summary>Every rupee of ${esc(chosen.route)}, with the rules used</summary><div>
       <ul class="lines">${chosen.lines.map((l) => `<li><span>${esc(l.label)} ${l.unverified.length ? `<span class="badge warn" title="${esc(l.unverified.join(", "))}">unverified rule</span>` : ""}</span>
         <b class="num">${esc(inr(l.amount_inr))}</b>${l.label !== "Total" ? `<small>${esc(l.text)}</small>` : ""}</li>`).join("")}</ul></div></details>
-    <div class="row"><button class="btn primary big" data-go="sign">Review &amp; sign →</button><span class="muted small">Tax figures are not tax advice. Rules marked unverified still need checking against RBI / Income Tax sources.</span></div>`;
+    <div class="row"><button class="btn primary big" data-go="sign">Review &amp; sign →</button><span class="muted small">Not tax advice${info("Tax figures are not tax advice. Rules marked unverified still need checking against RBI and Income Tax Department sources.")}</span></div>`;
 }
 
 function gauge() {
@@ -406,7 +349,7 @@ function gauge() {
   const used = Math.max(0, cap - before), L = Math.PI * 80;
   const usedLen = Math.min(L, used / cap * L), thisLen = Math.max(0, Math.min(L - usedLen, amount / cap * L));
   const fits = l.within_cap;
-  return `<div class="row between"><h2>Yearly LRS limit</h2><span class="badge ${fits ? "ok" : "deny"}">${fits ? "Within limit" : "Over: stopped"}</span></div>
+  return `<div class="row between"><h2>Yearly LRS limit${info("The Liberalised Remittance Scheme lets each resident send up to a yearly cap abroad. All purposes count, from 1 April.")}</h2><span class="badge ${fits ? "ok" : "deny"}">${fits ? "Within limit" : "Over: stopped"}</span></div>
     <div class="gauge-wrap" style="margin-top:8px">
       <svg class="gauge" viewBox="0 0 180 104" role="img" aria-label="LRS limit used">
         <path d="M10 94 A80 80 0 0 1 170 94" fill="none" stroke="var(--surface-2)" stroke-width="16" stroke-linecap="round"/>
@@ -416,7 +359,7 @@ function gauge() {
         <text x="90" y="100" text-anchor="middle" class="lbl">of USD ${(cap / 1000).toFixed(0)}k used</text>
       </svg>
       <div class="small"><p><span class="badge muted">Earlier</span> ${usd(used)}</p><p><span class="badge info">This payment</span> ${usd(amount)}${l.estimated ? " (est.)" : ""}</p>
-        <p><b>Left after: ${usd(l.headroom_after_usd)}</b></p><p class="faint tiny">Cap rule is marked unverified in the rule pack.</p></div>
+        <p><b>Left after: ${usd(l.headroom_after_usd)}</b></p><p class="faint tiny"><span class="badge warn">unverified</span>${info("The USD 250,000 yearly LRS cap is marked unverified in the rule pack until checked against RBI sources.")}</p></div>
     </div>`;
 }
 
@@ -453,33 +396,32 @@ function vSign() {
   const p = V.plan, approved = V.approval && V.approval.plan_hash === V.plan_hash_now, voided = V.approval && !approved;
   const steps = p.steps.map((s) => `<li><span class="pn">${s.n}</span><span>${esc(s.action)}<br><span class="faint mono">${esc(s.tool)}</span></span>${tier(s.tier)}</li>`).join("");
   const plan = `<section class="card">
-      <div class="row between"><h2>The plan</h2>${approved ? '<span class="badge ok">✓ Signed</span>' : voided ? '<span class="badge deny">Signature void: plan changed</span>' : '<span class="badge muted">Waiting for the parent</span>'}</div>
+      <div class="row between"><h2>The plan${info("T0 read · T1 compute and draft · T2 save or share · T3 sandbox payment (PIN + device signature) · T4 never allowed.")}</h2>${approved ? '<span class="badge ok">✓ Signed</span>' : voided ? '<span class="badge deny">Signature void: plan changed</span>' : '<span class="badge muted">Waiting for the parent</span>'}</div>
       <ul class="plan-steps" style="margin-top:8px">${steps}</ul>
-      <h3 style="margin:14px 0 6px">What the parent signs</h3>
+      <h3 style="margin:14px 0 6px">What the parent signs${info("The parent's device signs this hash. Any change to the plan, even one rupee, changes the hash and voids the signature.")}</h3>
       <div class="hashbox">${esc(V.plan_hash_now)}</div>
-      <p class="small" id="hash-check"><span class="spinner"></span> Your device is recomputing the plan hash…</p>
-      <p class="faint tiny">T0 read · T1 compute and draft · T2 save or share · T3 sandbox payment (PIN + device signature) · T4 never allowed.</p>
+      <p class="small" id="hash-check"><span class="spinner"></span> Checking on this device…</p>
     </section>`;
   let panel;
   if (payProgress) panel = `<section class="card"><h2>Sending in the sandbox…</h2><ul class="progress-list" style="margin-top:12px">${payProgress.map((x, i) =>
       `<li class="${x.ok ? "" : "bad"}" style="animation-delay:${i * 380}ms"><span class="ic">${x.ok ? "✓" : "✕"}</span><span><b>${esc(x.t)}</b><br><span class="muted small">${esc(x.d)}</span></span></li>`).join("")}</ul></section>`;
   else if (V.receipt) panel = `<section class="card"><h2>Paid ✓</h2><p class="muted">This plan was signed and paid in the sandbox.</p><button class="btn primary" data-go="receipt">See the receipt →</button></section>`;
-  else if (V.role !== "parent") panel =`<section class="card"><h2>Parent approval needed</h2><p>You're viewing as the <b>student</b>. You can review everything; only the parent's device can sign a payment.</p>
-      <button class="btn" data-role="parent">Switch to parent</button></section>`;
-  else if (p.max_tier === "T4") panel = `<section class="card"><h2>Cannot be signed</h2><div class="banner deny"><b>T4: never allowed.</b><span class="body">This plan would pay an unverified payee. No PIN or signature can allow it. Confirm the university's details by phone, using a number from its official website.</span></div>
+  else if (V.role !== "parent") panel = `<section class="card"><h2>Parent approval needed</h2><p class="muted">Students can review, not sign.${info("Only an enrolled parent device can sign a payment. Signing in as a student can never become a parent session; the server enforces it.")}</p>
+      <button class="btn" data-act="sign-out">Sign in as the parent</button></section>`;
+  else if (p.max_tier === "T4") panel = `<section class="card"><h2>Cannot be signed</h2><div class="banner deny"><b>T4: never allowed.</b><span class="body">Unverified payee.${info("No PIN or signature can allow paying an unverified payee. Confirm the university's details by phone, using a number from its official website.")}</span></div>
       <button class="btn danger" data-act="force-approve" style="margin-top:12px">Try to approve anyway</button></section>`;
   else if ((V.escalations || []).length) panel = `<section class="card"><h2>Needs a human first</h2>${V.escalations.map((e) => `<div class="banner deny" style="margin-top:10px"><span class="body">${esc(e.text)}</span></div>`).join("")}</section>`;
   else if (approved) panel = `<section class="card"><div class="row between"><h2>Signed by the parent</h2>${tier("T3")}</div>
-      <p class="muted small">Key <span class="mono">${esc(V.approval.signature.key_id)}</span> signed plan <span class="mono">${esc(short(V.approval.plan_hash))}</span>. The agent can't change the plan without breaking this signature.</p>
+      <p class="muted small">Key <span class="mono">${esc(V.approval.signature.key_id)}</span>${info(`Signed plan ${short(V.approval.plan_hash)}. The agent can't change the plan without breaking this signature.`)}</p>
       <button class="btn primary big" data-act="pay" style="margin-top:12px">Send payment (sandbox)</button>
       <p class="faint tiny" style="margin-top:8px">Balance ${esc(inr(V.balance_inr))}</p></section>
-      <section class="card" style="border-style:dashed"><div class="row between"><h3>Attack demo</h3><span class="badge warn">for judges</span></div>
-      <p class="small muted">Change the amount in the plan after it was signed, as a compromised agent might.</p><button class="btn sm danger" data-act="tamper_plan">Tamper with the plan</button></section>`;
+      <section class="card" style="border-style:dashed"><div class="row between"><h3>Attack demo${info("Change the amount in the plan after it was signed, as a compromised agent might. The payment is then refused.")}</h3><span class="badge warn">for judges</span></div>
+      <button class="btn sm danger" data-act="tamper_plan" style="margin-top:10px">Tamper with the plan</button></section>`;
   else if (!deviceRegistered()) panel = `<section class="card"><div class="row between"><h2>Set up the parent's device</h2>${tier("T2")}</div>
-      <p class="muted small">This browser makes a signing key that never leaves it. The agent only learns the public half. Enter the parent PIN to register it.</p>
+      <p class="muted small">Enter the parent PIN to register this browser.${info("This browser makes a signing key that never leaves it. The agent only learns the public half.")}</p>
       ${pinPad("Register this device")}</section>`;
   else panel = `<section class="card"><div class="row between"><h2>Sign &amp; approve</h2>${tier("T3")}</div>
-      <p class="muted small">Your device signs this exact plan with its key. ${voided ? "<b>The plan changed, so sign again.</b>" : ""}</p>
+      <p class="muted small">${voided ? "<b>The plan changed, so sign again.</b>" : "Signs this exact plan."}${info("Your device signs the plan hash with its own key. The PIN unlocks the approval; the signature proves it came from this device.")}</p>
       ${pinPad("Sign & approve")}</section>`;
   return `<div class="signing"><div class="stack">${plan}${draftCard()}</div><div class="stack">${panel}</div></div>`;
 }
@@ -544,7 +486,7 @@ function vLab() {
   const done = Object.values(labResults).filter((x) => x && x !== "running");
   const stopped = done.filter((x) => x.stopped).length;
   return `<section class="card hero"><div class="eyebrow">Attack lab</div><h1 style="margin:6px 0">Try to break TuitionPilot</h1>
-      <p class="lead">Each attack runs against a fresh, separate copy of the agent and bank, never your session. You see which defence stopped it.</p>
+      <p class="lead">See which defence stops each attack.${info("Each attack runs against a fresh, separate copy of the agent and bank, never your session.")}</p>
       <div class="row" style="margin-top:12px"><button class="btn primary big" data-act="lab-all">Run all ${labList.length} attacks</button>
         ${done.length ? `<span class="badge ${stopped === done.length ? "ok" : "deny"}">${stopped} of ${done.length} stopped</span>` : ""}</div></section>
     <div class="lab-grid">${labList.map((a) => {
@@ -561,6 +503,88 @@ function empty(t, d, goTo) {
   return `<section class="card" style="text-align:center;padding:50px 20px"><h2>${esc(t)}</h2><p class="muted">${esc(d)}</p><button class="btn" data-go="${goTo}">Go back</button></section>`;
 }
 
+/* ---------- family vault ---------- */
+function vVault() {
+  if (!V.device || !device) return empty("Sign in with a device", "The vault opens only on an enrolled family device.", "welcome");
+  if (!vaultDocs) {
+    api("POST", `/api/session/${V.id}/vault_list`, {}).then((r) => { vaultDocs = r.result; render(); }).catch((e) => toast(e.message, true));
+    return `<div class="empty"><span class="spinner"></span></div>`;
+  }
+  const parent = V.role === "parent";
+  const kb = (n) => n < 1024 ? `${n} B` : `${(n / 1024).toFixed(n < 10240 ? 1 : 0)} KB`;
+  const rows = vaultDocs.map((d) => `<div class="vault-row"><span><b>${esc(d.name)}</b><br>
+      <small>${esc(kb(d.size))} · from the ${esc(d.uploaded_by)} · ${new Date(d.uploaded_at * 1000).toLocaleDateString()}</small></span>
+      <span class="row">${d.shared_with.map((r) => `<span class="badge muted">${esc(r)}</span>`).join("")}
+        <button class="btn sm" data-act="vault-open" data-doc="${esc(d.doc_id)}">Open</button></span></div>`).join("");
+  return `<section class="card hero"><div class="eyebrow">Family vault</div>
+      <h1 style="margin:8px 0 6px"><b>Documents</b> only your family's devices can open.</h1>
+      <p class="lead">Encrypted on this device before upload.${info("Each file gets a fresh AES-256 key. That key is locked separately for every allowed device using its X25519 public key. The server stores only the locked file and locked keys, so it cannot read anything.")}</p></section>
+    <section class="card">
+      <div class="drop" id="vault-drop">
+        <b>Add a document</b> <span class="muted small">PDF or image, up to 2 MB</span>
+        <div class="row" style="justify-content:center;margin-top:12px">
+          <label class="btn primary" style="cursor:pointer">Choose file<input type="file" id="vault-file" hidden></label>
+          ${parent ? `<label class="row small" style="cursor:pointer"><input type="checkbox" id="vault-share" checked> Share with student devices</label>`
+            : `<span class="muted small">Shared with the parents${info("Student uploads are always readable by the parent devices, and by this device.")}</span>`}
+        </div>
+      </div>
+    </section>
+    <section class="card"><div class="row between"><h2>Files</h2><span class="muted small">${vaultDocs.length} on this device</span></div>
+      <div style="margin-top:6px">${rows || '<p class="muted">Nothing shared with this device yet.</p>'}</div></section>`;
+}
+
+async function kekFor(myPrivate, theirPublicRaw, salt) {  // X25519 shared secret -> HKDF -> AES-GCM key-wrapping key
+  const pub = await crypto.subtle.importKey("raw", theirPublicRaw, { name: "X25519" }, false, []);
+  const shared = await crypto.subtle.deriveBits({ name: "X25519", public: pub }, myPrivate, 256);
+  const base = await crypto.subtle.importKey("raw", shared, "HKDF", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt, info: utf8("tuitionpilot-vault-v1") }, base,
+    { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+}
+
+async function uploadDoc(file) {
+  if (file.size > 2 * 1024 * 1024) return toast("Files can be up to 2 MB.", true);
+  const share = !!($("#vault-share") && $("#vault-share").checked);
+  try {
+    const devices = (await api("GET", "/api/devices")).devices;
+    const to = devices.filter((d) => d.key_id === V.device || d.role === "parent" || (V.role === "parent" && share && d.role === "student"));
+    const fileKey = crypto.getRandomValues(new Uint8Array(32)), iv = crypto.getRandomValues(new Uint8Array(12));
+    const k = await crypto.subtle.importKey("raw", fileKey, "AES-GCM", false, ["encrypt"]);
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: utf8(file.name) }, k,
+      new Uint8Array(await file.arrayBuffer())));
+    const eph = await crypto.subtle.generateKey({ name: "X25519" }, false, ["deriveBits"]);  // one-time key for this file
+    const ephPub = new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey));
+    const wrapped = {};
+    for (const d of to) {
+      const wiv = crypto.getRandomValues(new Uint8Array(12));
+      const kek = await kekFor(eph.privateKey, unb64(d.box_key), ephPub);
+      wrapped[d.key_id] = { iv: b64(wiv), key: b64(new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: wiv }, kek, fileKey))) };
+    }
+    fileKey.fill(0);
+    const doc = { name: file.name, mime: file.type, iv: b64(iv), ciphertext: b64(ct), ephemeral_key: b64(ephPub), wrapped };
+    await api("POST", `/api/session/${V.id}/vault_put`, { doc });
+    toast(`Encrypted and uploaded for ${to.length} device${to.length === 1 ? "" : "s"}.`);
+  } catch (e) { toast("Upload failed: " + e.message, true); }
+  vaultDocs = null;
+  await refresh();
+  render();
+}
+
+async function openDoc(docId) {
+  try {
+    const d = (await api("POST", `/api/session/${V.id}/vault_get`, { doc_id: docId })).result;
+    const eph = unb64(d.ephemeral_key);
+    const kek = await kekFor(device.boxPrivate, eph, eph);
+    const fileKey = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(d.wrapped_key.iv) }, kek, unb64(d.wrapped_key.key));
+    const k = await crypto.subtle.importKey("raw", fileKey, "AES-GCM", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(d.iv), additionalData: utf8(d.name) }, k, unb64(d.ciphertext));
+    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([plain], { type: d.mime || "application/octet-stream" })), download: d.name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    await refresh();
+    render();
+  } catch (e) { toast(e.name === "OperationError" ? "This device's key cannot unlock that file." : e.message, true); }
+}
+
 /* ---------- live panel ---------- */
 const EV = {
   session_started: "Session started", consent: "Consent", role_switched: "Role switched", plan_built: "Plan built",
@@ -568,7 +592,8 @@ const EV = {
   payment_executed: "Payment executed (sandbox)", receipt_written: "Receipt written", escalated: "Escalated to a human",
   route_chosen: "Route chosen", document_marked: "Document marked", duplicate_click: "Duplicate click ignored",
   bank_refused: "Bank refused", plan_tampered_demo: "Plan tampered (demo)", payment_refused: "Payment refused",
-  untrusted_text_flagged: "Untrusted text flagged",
+  untrusted_text_flagged: "Untrusted text flagged", signed_in: "Signed in with device key",
+  vault_upload: "Vault file stored (encrypted)", vault_open: "Vault file sent (still encrypted)",
 };
 function describe(e) {
   const d = e.data || {};
@@ -610,10 +635,9 @@ function renderSide() {
   } else {
     const a = V.audit;
     html = `<div class="side-pad stack"><div class="row between"><b>Hash-chained audit log</b>${a.ok ? '<span class="badge ok">✓ intact</span>' : `<span class="badge deny">✕ tampered at #${esc(a.first_bad_seq)}</span>`}</div>
-      <p class="small muted">${a.entries} entries. Each entry includes the hash of the one before, so any edit breaks the chain.</p>
+      <p class="small muted">${a.entries} entries${info("Each entry includes the hash of the one before, so any edit breaks the chain. Command line: python -m app.audit verify FILE")}</p>
       <div class="hashbox">head ${esc(a.head)}…</div>
-      <div class="row"><button class="btn sm" data-act="verify-audit">Verify chain</button><button class="btn sm danger" data-act="tamper-audit">Tamper (demo)</button></div>
-      <p class="faint tiny">Command line: python -m app.audit verify FILE</p></div>`;
+      <div class="row"><button class="btn sm" data-act="verify-audit">Verify chain</button><button class="btn sm danger" data-act="tamper-audit">Tamper (demo)</button></div></div>`;
   }
   $("#side").innerHTML = html;
 }
@@ -626,8 +650,8 @@ function after() {
   if (view === "sign" && V.plan && $("#hash-check")) {
     planHashHere(V.plan).then((h) => {
       const ok = h === V.plan_hash_now && h === V.plan.plan_hash;
-      $("#hash-check").innerHTML = ok ? `<span class="badge ok">✓ Matches</span> <span class="muted">Your device computed the same hash from the plan it shows you.</span>`
-        : `<span class="badge deny">✕ Mismatch</span> <span class="muted">The plan shown does not hash to what the agent claims. Do not sign.</span>`;
+      $("#hash-check").innerHTML = ok ? `<span class="badge ok">✓ Matches</span> <span class="muted">Hash checked on this device</span>${info("Your device computed the same hash from the plan it shows you, so what you see is what you sign.")}`
+        : `<span class="badge deny">✕ Mismatch</span> <span class="muted">Do not sign</span>${info("The plan shown does not hash to what the agent claims.")}`;
     }).catch(() => { $("#hash-check").textContent = "This browser cannot compute SHA-256."; });
   }
   const log = $("#chatlog");
@@ -703,12 +727,12 @@ function renderSettings() {
       <span class="muted small">${p.parent_keys.length ? p.parent_keys.map((k) => `<span class="mono">${esc(k)}</span>${device && device.keyId === k ? " (this browser)" : ""}`).join("<br>") : "None registered yet."}</span>
       <div class="row"><button class="btn sm" data-set="device">${device ? (deviceRegistered() ? "Re-register this browser" : "Register this browser") : "Create key in this browser"}</button>
         ${device ? '<button class="btn sm danger" data-set="forget">Forget this browser\'s key</button>' : ""}</div></div>
-    <div class="setting"><b>Emergency stop</b><span class="muted small">Denies every money action at once.</span>
+    <div class="setting"><b>Emergency stop${info("Denies every money action at once.")}</b>
       <div class="row"><span class="badge ${p.emergency_stop ? "deny" : "ok"}">${p.emergency_stop ? "ON" : "off"}</span>
         <button class="btn sm ${p.emergency_stop ? "" : "danger"}" data-set="stop">${p.emergency_stop ? "Turn off" : "Turn on"}</button></div></div>
     <div class="setting"><b>Per-payment cap</b><div class="row"><span>USD</span><input id="s-cap" type="text" value="${esc(p.per_payment_cap_usd)}" style="width:120px">
       <button class="btn sm" data-set="cap">Save</button></div></div>
-    <div class="setting"><b>Circuit breaker</b><span class="muted small">Freezes the agent after ${p.breaker_threshold} denied money attempts in a row.</span>
+    <div class="setting"><b>Circuit breaker${info(`Freezes the agent after ${p.breaker_threshold} denied money attempts in a row.`)}</b>
       <div class="row"><span class="badge ${p.frozen ? "deny" : "ok"}">${p.frozen ? "FROZEN" : "normal"}</span><span class="muted small">${p.denied_in_a_row} in a row</span>
         <button class="btn sm" data-set="reset" ${p.frozen || p.denied_in_a_row ? "" : "disabled"}>Reset</button></div></div>`;
 }
@@ -716,7 +740,7 @@ async function changeSetting(kind) {
   const pinValue = $("#s-pin").value;
   try {
     if (kind === "device") { const r = await setUpDevice(pinValue); toast(r.reason); }
-    else if (kind === "forget") { await idb.del("parent"); device = null; toast("This browser's key was deleted. Register a new one to sign."); }
+    else if (kind === "forget") { await idb.del(V.role); device = null; toast("This browser's key was deleted. Enrol it again to sign in."); }
     else {
       const body = { pin: pinValue };
       if (kind === "stop") body.emergency_stop = !V.policy.emergency_stop;
@@ -733,11 +757,11 @@ async function changeSetting(kind) {
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (ev) => {
+  if (ev.target.closest(".i-btn")) return;
   const t = ev.target.closest("button, [data-route], [data-go]");
   if (!t || !V) return;
   const d = t.dataset;
   if (d.go) return go(d.go);
-  if (d.role) return act("role", { role: d.role }, { advance: false });
   if (d.side) { side = d.side; store.set("tp.side", side); return render(); }
   if (d.sample) return act("invoice", { sample: d.sample }, { advance: false });
   if (d.answer) return act("answer", { field: V.question.field, value: d.answer });
@@ -764,6 +788,8 @@ document.addEventListener("click", async (ev) => {
     case "tamper_plan": return act("tamper_plan", {}, { advance: false });
     case "force-approve": return act("approve", { pin: "" }, { advance: false });
     case "print": return window.print();
+    case "sign-out": return signOut();
+    case "vault-open": return openDoc(t.dataset.doc);
     case "lab-all": for (const a of labList) await runLab(a.id); return;
     case "verify-audit": {
       const r = await api("GET", "/api/audit");
@@ -779,6 +805,7 @@ document.addEventListener("click", async (ev) => {
   }
   switch (t.id) {
     case "nav-lab": return go("lab");
+    case "nav-vault": vaultDocs = null; return go("vault");
     case "open-settings": $("#settings").hidden = false; renderSettings(); return $("#s-pin").focus();
     case "close-settings": $("#settings").hidden = true; return;
     case "delete-data": {
@@ -808,6 +835,7 @@ document.addEventListener("change", (ev) => {
   if (t.id === "c1" || t.id === "c2") $("#consent-btn").disabled = !($("#c1").checked && $("#c2").checked);
   if (t.dataset.doc) act("document", { key: t.dataset.doc, have: t.checked }, { advance: false, quiet: true });
   if (t.id === "file" && t.files[0]) readFile(t.files[0]);
+  if (t.id === "vault-file" && t.files[0]) uploadDoc(t.files[0]);
 });
 document.addEventListener("input", (ev) => {
   if (ev.target.id === "wf-prior") {
@@ -838,5 +866,4 @@ document.addEventListener("dragover", (ev) => { const d = ev.target.closest && e
 document.addEventListener("dragleave", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) d.classList.remove("over"); });
 document.addEventListener("drop", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.remove("over"); if (ev.dataTransfer.files[0]) readFile(ev.dataTransfer.files[0]); } });
 $("#settings").addEventListener("click", (ev) => { if (ev.target.id === "settings") $("#settings").hidden = true; });
-
 start().catch((e) => toast("Could not reach the TuitionPilot server: " + e.message, true));

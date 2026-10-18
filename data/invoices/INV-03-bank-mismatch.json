@@ -1,0 +1,25 @@
+{
+  "type": "invoice",
+  "contract_version": "1.0",
+  "invoice_id": "NBU-INV-2026-0177",
+  "issued_on": "2026-10-05",
+  "due_on": "2026-10-25",
+  "payee": {
+    "name": "Northbridge University (synthetic)",
+    "registry_id": "PAYEE-US-0007",
+    "country": "US",
+    "bank": {
+      "account_masked": "XXXX-XXXX-0013",
+      "swift": "QKPYUS44"
+    }
+  },
+  "student": {
+    "name": "Meera Student (synthetic)",
+    "student_id": "NBU-2026-1590"
+  },
+  "amount": {
+    "value": "19800.00",
+    "currency": "USD"
+  },
+  "purpose": "education"
+}

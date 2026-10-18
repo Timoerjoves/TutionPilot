@@ -9,7 +9,7 @@ from decimal import Decimal as D
 from pathlib import Path
 
 from agent.agent import Agent, parse_amount
-from agent.model import OfflineModel
+from agent.model import OfflineModel, json_to_text
 from app import audit
 from app.policy import Policy
 from app.sandbox import BankError, SandboxBank, now_ist
@@ -53,6 +53,32 @@ class TestInvoiceReader(unittest.TestCase):
         inv, uncertain = OfflineModel().extract("Invoice No: X-1\nDue date: 15 Nov 2026")
         self.assertEqual(inv["due_on"], "2026-11-15")
         self.assertIn("due_on", uncertain)
+
+    def test_json_invoice_files_are_read(self):
+        sample = fx.load_sample("invoice")
+        for f in sorted((ROOT / "data" / "invoices").glob("INV-*.json")) + [ROOT / "data/samples/invoice.json"]:
+            with self.subTest(invoice=f.name):
+                text, obj = json_to_text(f.read_text(encoding="utf-8"))
+                self.assertNotIn("attestation", text)  # the signature block never reaches the model
+                inv, uncertain = OfflineModel().extract(text)
+                self.assertEqual((inv["invoice_id"], inv["amount"], inv["payee"]),
+                                 (obj["invoice_id"], obj["amount"], obj["payee"]))
+                self.assertEqual(uncertain, [])
+        self.assertEqual(json_to_text(json.dumps(sample))[1]["payee"], sample["payee"])
+
+    def test_json_invoice_with_other_key_names(self):
+        text, _ = json_to_text('[{"invoiceId": "X-9", "dueDate": "2026-11-15", "university": {"name": "U", '
+                               '"country": "gb", "bankDetails": {"swiftCode": "AB", "accountNumber": "XX12"}}, '
+                               '"totalDue": {"amount": 1234.5, "currency": "GBP"}}]')
+        inv, _ = OfflineModel().extract(text)
+        self.assertEqual(inv["invoice_id"], "X-9")
+        self.assertEqual(inv["amount"], {"value": "1234.50", "currency": "GBP"})
+        self.assertEqual(inv["payee"], {"name": "U", "country": "GB", "bank": {"swift": "AB", "account_masked": "XX12"}})
+
+    def test_bad_json_is_refused(self):
+        for bad in ("{not json", "[1, 2]", "[]"):
+            with self.subTest(text=bad), self.assertRaises(ValueError):
+                json_to_text(bad)
 
     def test_parse_amount(self):
         self.assertEqual(parse_amount("6,00,000"), 600000)
@@ -205,6 +231,16 @@ class TestAgentFlow(unittest.TestCase):
         self.a.upload_invoice(self.sid, sample=sample)
         for field, value in FAMILY:
             self.a.answer(self.sid, field, value)
+
+    def test_signed_json_invoice_upload_is_verified(self):
+        self.a.consent(self.sid, True)
+        self.a.upload_invoice(self.sid, text=(ROOT / "data/samples/invoice.json").read_text(encoding="utf-8"))
+        for field, value in FAMILY:
+            self.a.answer(self.sid, field, value)
+        s = self.a.get(self.sid)
+        self.assertTrue(s["trust"]["verified"])
+        self.assertEqual(s["escalations"], [])
+        self.assertIsNotNone(s["plan"])
 
     def test_consent_required_before_upload(self):
         with self.assertRaises(PermissionError):

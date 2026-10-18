@@ -19,6 +19,8 @@ from app import lab
 
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 64 * 1024
+MAX_VAULT_BODY = 4 * 1024 * 1024  # a sealed file of up to 2 MB, base64-encoded
+PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html"}
 LOCK = threading.Lock()
 SESSION_ACTIONS = {
     "consent": lambda a, sid, b: a.consent(sid, b.get("accept")),
@@ -28,6 +30,7 @@ SESSION_ACTIONS = {
     "route": lambda a, sid, b: a.choose_route(sid, b.get("quote_id")),
     "refresh": lambda a, sid, b: a.refresh_quotes(sid),
     "role": lambda a, sid, b: a.set_role(sid, b.get("role")),
+    "vault_put": lambda a, sid, b: {"ok": True, "doc": a.vault_put(sid, b.get("doc"))},
     "document": lambda a, sid, b: a.set_document(sid, b.get("key"), b.get("have")),
     "approve": lambda a, sid, b: a.approve(sid, b.get("pin"), b.get("approval")),
     "pay": lambda a, sid, b: a.pay(sid),
@@ -35,6 +38,8 @@ SESSION_ACTIONS = {
 }
 READ_ACTIONS = {  # compute only; the session is not changed
     "whatif": lambda a, sid, b: a.whatif(sid, b.get("prior_inr"), b.get("funding"), b.get("has_pan")),
+    "vault_list": lambda a, sid, b: a.vault_list(sid),
+    "vault_get": lambda a, sid, b: a.vault_get(sid, b.get("doc_id")),
 }
 
 
@@ -59,7 +64,7 @@ def make_handler(agent):
 
         def _body(self):
             n = int(self.headers.get("Content-Length") or 0)
-            if n > MAX_BODY:
+            if n > (MAX_VAULT_BODY if self.path.endswith("/vault_put") else MAX_BODY):
                 raise ValueError("request too large")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
@@ -69,7 +74,7 @@ def make_handler(agent):
                 if path.startswith("/api/"):
                     with LOCK:
                         return self._send(200, self._api_get(path))
-                name = "index.html" if path in ("/", "") else path.lstrip("/")
+                name = PAGES.get(path) or path.lstrip("/")
                 f = (STATIC / name).resolve()
                 if STATIC not in f.parents or not f.is_file():
                     return self._send(404, {"error": "not found"})
@@ -96,6 +101,8 @@ def make_handler(agent):
                 return agent.audit.verify()
             if path == "/api/lab":
                 return {"attacks": lab.listing()}
+            if path == "/api/devices":  # public keys only: needed to share a vault file with a device
+                return {"devices": agent.family.listing()}
             if path == "/api/trust":
                 return {"root": agent.trust.root, "revoked": sorted(agent.trust.revoked)}
             raise KeyError("not found")
@@ -105,9 +112,18 @@ def make_handler(agent):
             try:
                 body = self._body()
                 with LOCK:
-                    if path == "/api/session":
-                        s = agent.new_session(body.get("role", "parent"))
+                    if path == "/api/session":  # a guest session can only look; acting as the parent needs sign-in
+                        s = agent.new_session("student")
                         return self._send(200, {"view": agent.view(s["id"])})
+                    if path == "/api/auth/challenge":
+                        return self._send(200, {"nonce": agent.family.challenge()})
+                    if path == "/api/auth/sign_in":
+                        s = agent.sign_in(body.get("nonce"), body.get("key_id"), body.get("signature"))
+                        return self._send(200, {"view": agent.view(s["id"])})
+                    if path == "/api/devices":
+                        d = agent.register_device(body.get("pin"), body.get("role"), body.get("public_key"),
+                                                  body.get("box_key"), body.get("label", "browser"))
+                        return self._send(200, {"result": d.to_dict(), "devices": agent.family.listing()})
                     if path == "/api/settings":
                         d = agent.settings(body.get("pin"), per_payment_cap_usd=body.get("per_payment_cap_usd"),
                                            emergency_stop=body.get("emergency_stop"),
@@ -136,7 +152,9 @@ def make_handler(agent):
                     return self._send(200, {"result": result, "view": agent.view(sid)})
             except KeyError as e:
                 return self._send(404, {"error": str(e).strip("'")})
-            except (ValueError, PermissionError) as e:
+            except PermissionError as e:
+                return self._send(403, {"error": str(e)})
+            except ValueError as e:
                 return self._send(400, {"error": str(e)})
             except json.JSONDecodeError:
                 return self._send(400, {"error": "body must be JSON"})

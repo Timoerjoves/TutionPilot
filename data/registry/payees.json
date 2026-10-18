@@ -1,0 +1,26 @@
+{
+  "type": "payee_registry",
+  "note": "Synthetic verified payees. Bank details must match exactly.",
+  "payees": [
+    {
+      "registry_id": "PAYEE-US-0007",
+      "name": "Northbridge University (synthetic)",
+      "country": "US",
+      "bank": {
+        "account_masked": "XXXX-XXXX-4821",
+        "swift": "SYNTUS33"
+      },
+      "verified": true
+    },
+    {
+      "registry_id": "PAYEE-UK-0003",
+      "name": "Kingsford University (synthetic)",
+      "country": "GB",
+      "bank": {
+        "account_masked": "XXXX-XXXX-7713",
+        "swift": "SYNTGB2L"
+      },
+      "verified": true
+    }
+  ]
+}

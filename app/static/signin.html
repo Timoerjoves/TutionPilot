@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · TuitionPilot</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233563c9'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='700' fill='white' text-anchor='middle'%3Etp%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="site">
+  <div class="auth">
+    <aside class="auth-side">
+      <a class="wordmark" href="/" aria-label="TuitionPilot home">tuition<b>pilot</b></a>
+      <div>
+        <h1 class="display" style="font-size:34px"><b>No passwords.</b><br>Your device is your key.</h1>
+        <ul class="ticks" style="margin-top:22px">
+          <li>The private key never leaves this browser</li>
+          <li>Each sign-in signs a one-time challenge</li>
+          <li>New devices need the parent's PIN</li>
+        </ul>
+      </div>
+      <p class="faint tiny">Sandbox demo · synthetic data</p>
+    </aside>
+
+    <main class="auth-main">
+      <section class="card auth-card" id="auth" aria-live="polite">
+        <div class="empty"><span class="spinner"></span></div>
+      </section>
+      <p class="faint tiny" style="text-align:center"><a class="link" href="/">← Back to home</a></p>
+    </main>
+  </div>
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="common.js"></script>
+  <script src="signin.js"></script>
+</body>
+</html>

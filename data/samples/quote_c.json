@@ -1,0 +1,16 @@
+{
+  "type": "quote",
+  "contract_version": "1.1",
+  "quote_id": "Q-SYN-0003",
+  "route_name": "Provider C",
+  "provider": "Sandbox Bank C",
+  "foreign_amount": {
+    "value": "20000.00",
+    "currency": "USD"
+  },
+  "fx_rate": "90.05",
+  "fee_inr": "5000.00",
+  "gst_rate": "0.18",
+  "correspondent_inr": "1500.00",
+  "valid_until": "2026-10-16T18:00:00+05:30"
+}
