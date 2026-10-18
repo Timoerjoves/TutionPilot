@@ -1,0 +1,22 @@
+{
+  "certificate": {
+    "type": "payee_certificate",
+    "serial": "CERT-CA-0012-2026",
+    "issuer": "ed25519:1a0060439813ce7a",
+    "subject": {
+      "payee_id": "PAYEE-CA-0012",
+      "name": "Mapleford University (synthetic)",
+      "country": "CA",
+      "currency": "CAD",
+      "bank": {
+        "account_masked": "XXXX-XXXX-5512",
+        "swift": "SYNTCA2T"
+      }
+    },
+    "public_key": "dIH949ABQfb1OcZ82ZJJpqujhgH0Fu3u61Ccuoj3T4c=",
+    "key_id": "ed25519:b95a11ef6f7a1263",
+    "valid_from": "2026-09-01",
+    "valid_to": "2027-08-31"
+  },
+  "signature": "B/ZInM+Up50nORAl6ae2XDZBQujuxBA0C99+FhgYTA6yZWfEqMgKQDWiKHpXvUX6dqORo2dpjZgPGQnK5zytDg=="
+}

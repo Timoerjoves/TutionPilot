@@ -1,0 +1,52 @@
+{
+  "amount": {
+    "currency": "AUD",
+    "value": "24000.00"
+  },
+  "attestation": {
+    "alg": "Ed25519",
+    "certificate": {
+      "certificate": {
+        "issuer": "ed25519:1a0060439813ce7a",
+        "key_id": "ed25519:8a7371606be9bb6f",
+        "public_key": "jCOkxyrmio7P9NUFTthpoyZPc3QOY2BAZKeKzU336to=",
+        "serial": "CERT-AU-0021-2026",
+        "subject": {
+          "bank": {
+            "account_masked": "XXXX-XXXX-6621",
+            "swift": "SYNTAU2S"
+          },
+          "country": "AU",
+          "currency": "AUD",
+          "name": "Harbourview University (synthetic)",
+          "payee_id": "PAYEE-AU-0021"
+        },
+        "type": "payee_certificate",
+        "valid_from": "2026-09-01",
+        "valid_to": "2027-08-31"
+      },
+      "signature": "ZpRjLjgukPg28kiCsSZEaDk4B244lqAxoWYfjv+EO/zDplu86k2X7pOrdnzGQNdVsuz8fhUNSzK3cZK02BDCBw=="
+    },
+    "signature": "efQK1kkbwz96TXDX3TpVD5orcC7wN4R1+qX+pDIqYEL7e1NDpysHGkRSscGpcyyVZ9p7RSwK0COw4OCh+TlsCw=="
+  },
+  "contract_version": "1.1",
+  "description": "Tuition fee, Winter term",
+  "due_on": "2026-12-10",
+  "invoice_id": "INV-SYN-0301",
+  "issued_on": "2026-10-06",
+  "payee": {
+    "bank": {
+      "account_masked": "XXXX-XXXX-6621",
+      "swift": "SYNTAU2S"
+    },
+    "country": "AU",
+    "name": "Harbourview University (synthetic)",
+    "registry_id": "PAYEE-AU-0021"
+  },
+  "purpose": "education",
+  "student": {
+    "name": "Asha Student (synthetic)",
+    "student_id": "HVU-2026-3317"
+  },
+  "type": "invoice"
+}

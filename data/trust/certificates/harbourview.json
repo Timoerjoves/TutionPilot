@@ -1,0 +1,22 @@
+{
+  "certificate": {
+    "type": "payee_certificate",
+    "serial": "CERT-AU-0021-2026",
+    "issuer": "ed25519:1a0060439813ce7a",
+    "subject": {
+      "payee_id": "PAYEE-AU-0021",
+      "name": "Harbourview University (synthetic)",
+      "country": "AU",
+      "currency": "AUD",
+      "bank": {
+        "account_masked": "XXXX-XXXX-6621",
+        "swift": "SYNTAU2S"
+      }
+    },
+    "public_key": "jCOkxyrmio7P9NUFTthpoyZPc3QOY2BAZKeKzU336to=",
+    "key_id": "ed25519:8a7371606be9bb6f",
+    "valid_from": "2026-09-01",
+    "valid_to": "2027-08-31"
+  },
+  "signature": "ZpRjLjgukPg28kiCsSZEaDk4B244lqAxoWYfjv+EO/zDplu86k2X7pOrdnzGQNdVsuz8fhUNSzK3cZK02BDCBw=="
+}

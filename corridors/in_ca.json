@@ -1,0 +1,22 @@
+{
+  "corridor_id": "IN-CA",
+  "version": "2026.10.18-r1",
+  "description": "India to Canada, university tuition. Same India rule pack as in_us.json; only destination details differ.",
+  "origin_country": "IN",
+  "destination_country": "CA",
+  "currency": "CAD",
+  "rule_pack": "india-lrs-tcs",
+  "purpose": {
+    "value": "S0305",
+    "description": "Remittance towards education (fees, hostel expenses etc.)",
+    "status": "unverified",
+    "source": "Common bank A2 forms",
+    "check_against": "RBI purpose codes for reporting FEMA transactions"
+  },
+  "student_visa_document": {
+    "value": "Letter of acceptance from a Designated Learning Institution (DLI)",
+    "status": "unverified",
+    "source": "General knowledge of the Canadian study permit process",
+    "check_against": "Immigration, Refugees and Citizenship Canada (canada.ca study permit)"
+  }
+}

@@ -28,6 +28,8 @@ const STEPS = [
 const SAMPLES = {
   valid_us: ["good", "Genuine invoice", "Northbridge · USA · USD 20,000"],
   valid_uk: ["good", "Genuine invoice", "Eastholm · UK · GBP 12,000"],
+  valid_ca: ["good", "Genuine invoice", "Mapleford · Canada · CAD 28,000"],
+  valid_au: ["good", "Genuine invoice", "Harbourview · Australia · AUD 24,000"],
   missing_due_date: ["good", "Missing due date", "Agent must ask, not guess"],
   over_cap: ["good", "Large invoice", "USD 60,000 · above the cap"],
   tampered_bank: ["bad", "Changed bank details", "Classic tuition fraud"],

@@ -15,14 +15,14 @@ from rules import Route
 IST = timezone(timedelta(hours=5, minutes=30))
 
 PROVIDERS = [
-    {"route_name": "Provider A", "provider": "Sandbox Bank A", "rates": {"USD": "90.50", "GBP": "114.80"},
+    {"route_name": "Provider A", "provider": "Sandbox Bank A", "rates": {"USD": "90.50", "GBP": "114.80", "CAD": "66.10", "AUD": "59.40"},
      "fee_inr": "1500.00", "gst_rate": "0", "correspondent_inr": "0"},
-    {"route_name": "Provider B", "provider": "Sandbox Bank B", "rates": {"USD": "90.20", "GBP": "114.40"},
+    {"route_name": "Provider B", "provider": "Sandbox Bank B", "rates": {"USD": "90.20", "GBP": "114.40", "CAD": "65.85", "AUD": "59.15"},
      "fee_inr": "3000.00", "gst_rate": "0", "correspondent_inr": "0"},
-    {"route_name": "Provider C", "provider": "Sandbox Remit C", "rates": {"USD": "90.35", "GBP": "114.55"},
+    {"route_name": "Provider C", "provider": "Sandbox Remit C", "rates": {"USD": "90.35", "GBP": "114.55", "CAD": "65.95", "AUD": "59.30"},
      "fee_inr": "999.00", "gst_rate": "0.18", "correspondent_inr": "0"},
 ]
-MID_MARKET = {"USD": "90.00", "GBP": "114.20"}  # illustrative mid-market INR per unit
+MID_MARKET = {"USD": "90.00", "GBP": "114.20", "CAD": "65.70", "AUD": "59.00"}  # illustrative mid-market INR per unit
 QUOTE_MINUTES = 30
 
 

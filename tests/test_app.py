@@ -242,6 +242,22 @@ class TestAgentFlow(unittest.TestCase):
         self.assertEqual(s["escalations"], [])
         self.assertIsNotNone(s["plan"])
 
+    def test_canada_and_australia_corridors_end_to_end(self):
+        import corridors
+        self.assertEqual(corridors.available(), ["IN-AU", "IN-CA", "IN-GB", "IN-US"])
+        for sample, currency, visa in (("valid_ca", "CAD", "Designated Learning Institution"), ("valid_au", "AUD", "Confirmation of Enrolment")):
+            with self.subTest(sample=sample):
+                self.sid = self.a.new_session("parent")["id"]
+                self.complete(sample)
+                s = self.a.get(self.sid)
+                self.assertTrue(s["trust"]["verified"])
+                self.assertEqual(s["escalations"], [])
+                self.assertEqual(s["plan"]["steps"][-1]["inputs"]["currency"], currency)
+                self.assertEqual(len(s["ranked"]), 3)
+                self.assertIn(visa, json.dumps(s["draft"]))
+                self.assertEqual(self.approve(), {"ok": True})
+                self.assertTrue(self.a.pay(self.sid)["ok"])
+
     def test_consent_required_before_upload(self):
         with self.assertRaises(PermissionError):
             self.a.upload_invoice(self.sid, sample="valid_us")

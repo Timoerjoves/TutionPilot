@@ -14,7 +14,7 @@ US = corridors.load("IN-US")
 
 class TestCorridors(unittest.TestCase):
     def test_both_corridors_load(self):
-        self.assertEqual(corridors.available(), ["IN-GB", "IN-US"])
+        self.assertEqual(corridors.available(), ["IN-AU", "IN-CA", "IN-GB", "IN-US"])
         self.assertEqual(corridors.load("IN-GB")["currency"], "GBP")
 
     def test_corridors_share_the_india_rule_pack(self):

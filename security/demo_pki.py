@@ -26,6 +26,12 @@ UNIS = {
     "eastholm": {"payee_id": "PAYEE-GB-0003", "name": "Eastholm University (synthetic)", "country": "GB",
                  "currency": "GBP", "bank": {"account_masked": "XXXX-XXXX-3307", "swift": "SYNTGB22"},
                  "serial": "CERT-GB-0003-2026", "office": "Finance Office", "student_id": "EHU-2026-0457"},
+    "mapleford": {"payee_id": "PAYEE-CA-0012", "name": "Mapleford University (synthetic)", "country": "CA",
+                  "currency": "CAD", "bank": {"account_masked": "XXXX-XXXX-5512", "swift": "SYNTCA2T"},
+                  "serial": "CERT-CA-0012-2026", "office": "Student Financial Services", "student_id": "MFU-2026-2208"},
+    "harbourview": {"payee_id": "PAYEE-AU-0021", "name": "Harbourview University (synthetic)", "country": "AU",
+                    "currency": "AUD", "bank": {"account_masked": "XXXX-XXXX-6621", "swift": "SYNTAU2S"},
+                    "serial": "CERT-AU-0021-2026", "office": "Student Fees Office", "student_id": "HVU-2026-3317"},
 }
 SUBJECT_KEYS = ("payee_id", "name", "country", "currency", "bank")
 
@@ -85,6 +91,12 @@ def main():
 
     uk = invoice(eh, "INV-SYN-0101", "2026-10-05", "2026-12-01", "12000.00", "Tuition fee, Term 2")
     files["valid_uk"] = embed(visible(uk, eh["office"]), sign_invoice(secrets["eastholm"], certs["eastholm"], uk))
+
+    for key, sample, inv_id, amount in (("mapleford", "valid_ca", "INV-SYN-0201", "28000.00"),
+                                        ("harbourview", "valid_au", "INV-SYN-0301", "24000.00")):
+        u = UNIS[key]
+        doc = invoice(u, inv_id, "2026-10-06", "2026-12-10", amount, "Tuition fee, Winter term")
+        files[sample] = embed(visible(doc, u["office"]), sign_invoice(secrets[key], certs[key], doc))
 
     nodue = invoice(nb, "INV-SYN-0002", "2026-10-01", None, "20000.00", "Tuition fee, Spring 2027")
     files["missing_due_date"] = embed(visible(nodue, nb["office"]), sign_invoice(secrets["northbridge"], certs["northbridge"], nodue))

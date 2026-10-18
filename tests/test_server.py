@@ -94,6 +94,24 @@ class TestServer(unittest.TestCase):
         code, r = self.post(f"/api/session/{sid}/delete")
         self.assertEqual(self.call("GET", f"/api/session/{sid}")[0], 404)
 
+    def test_cross_site_requests_refused(self):  # risk R20
+        def raw(method, headers, body=b"{}"):
+            req = urllib.request.Request(self.base + "/api/session", method=method, data=body if method == "POST" else None,
+                                         headers=headers)
+            try:
+                with urllib.request.urlopen(req) as r:
+                    return r.status
+            except urllib.error.HTTPError as e:
+                with e:
+                    return e.code
+        json_ct = {"Content-Type": "application/json"}
+        self.assertEqual(raw("POST", {**json_ct, "Origin": "https://evil.example"}), 403)
+        self.assertEqual(raw("POST", {"Content-Type": "text/plain"}), 403)  # a form-style "simple" request
+        self.assertEqual(raw("POST", {**json_ct, "Host": "attacker.example:80"}), 403)  # DNS rebinding
+        self.assertEqual(raw("GET", {"Host": "attacker.example:80"}), 403)
+        self.assertEqual(raw("POST", {**json_ct, "Origin": self.base}), 200)
+        self.assertEqual(raw("POST", json_ct), 200)  # no Origin: a script or curl on this computer
+
     def test_bad_requests(self):
         self.assertEqual(self.post("/api/session/000000000000/pay")[0], 404)
         code, _, _ = self.call("GET", "/api/sample/../../secrets")

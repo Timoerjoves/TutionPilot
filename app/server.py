@@ -66,12 +66,29 @@ def make_handler(agent):
 
         def _body(self):
             n = int(self.headers.get("Content-Length") or 0)
-            if n > (MAX_VAULT_BODY if self.path.endswith(("/vault_put", "/invoice")) else MAX_BODY):
+            if n < 0 or n > (MAX_VAULT_BODY if self.path.endswith(("/vault_put", "/invoice")) else MAX_BODY):
                 raise ValueError("request too large")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
 
+        def _cross_site(self, post=False):
+            """Why a request looks cross-site (CSRF, DNS rebinding), or None. Browsers can't send JSON cross-origin
+            without a preflight we never answer, so POSTs must be JSON; Host and Origin must be this server."""
+            port = self.server.server_address[1]
+            ours = {f"127.0.0.1:{port}", f"localhost:{port}"}
+            if (self.headers.get("Host") or "").lower() not in ours:
+                return "unexpected Host header"
+            origin = self.headers.get("Origin")
+            if origin and origin.lower() not in {f"http://{h}" for h in ours}:
+                return "cross-site request refused"
+            if post and not (self.headers.get("Content-Type") or "").lower().startswith("application/json"):
+                return "requests must be JSON"
+            return None
+
         def do_GET(self):
             path = self.path.split("?")[0]
+            why = self._cross_site()
+            if why:
+                return self._send(403, {"error": why})
             try:
                 if path.startswith("/api/"):
                     with LOCK:
@@ -111,6 +128,9 @@ def make_handler(agent):
 
         def do_POST(self):
             path = self.path.split("?")[0]
+            why = self._cross_site(post=True)
+            if why:
+                return self._send(403, {"error": why})
             try:
                 body = self._body()
                 with LOCK:

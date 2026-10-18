@@ -1,0 +1,52 @@
+{
+  "amount": {
+    "currency": "CAD",
+    "value": "28000.00"
+  },
+  "attestation": {
+    "alg": "Ed25519",
+    "certificate": {
+      "certificate": {
+        "issuer": "ed25519:1a0060439813ce7a",
+        "key_id": "ed25519:b95a11ef6f7a1263",
+        "public_key": "dIH949ABQfb1OcZ82ZJJpqujhgH0Fu3u61Ccuoj3T4c=",
+        "serial": "CERT-CA-0012-2026",
+        "subject": {
+          "bank": {
+            "account_masked": "XXXX-XXXX-5512",
+            "swift": "SYNTCA2T"
+          },
+          "country": "CA",
+          "currency": "CAD",
+          "name": "Mapleford University (synthetic)",
+          "payee_id": "PAYEE-CA-0012"
+        },
+        "type": "payee_certificate",
+        "valid_from": "2026-09-01",
+        "valid_to": "2027-08-31"
+      },
+      "signature": "B/ZInM+Up50nORAl6ae2XDZBQujuxBA0C99+FhgYTA6yZWfEqMgKQDWiKHpXvUX6dqORo2dpjZgPGQnK5zytDg=="
+    },
+    "signature": "KxUOsb//iPiXWpG/WayU2IIKci40Dp1g9NvDBWC4xluIpL7dxJ/O3YT3ItCZEb7KViSe7V8Ko72Ta7S/2Px4Bg=="
+  },
+  "contract_version": "1.1",
+  "description": "Tuition fee, Winter term",
+  "due_on": "2026-12-10",
+  "invoice_id": "INV-SYN-0201",
+  "issued_on": "2026-10-06",
+  "payee": {
+    "bank": {
+      "account_masked": "XXXX-XXXX-5512",
+      "swift": "SYNTCA2T"
+    },
+    "country": "CA",
+    "name": "Mapleford University (synthetic)",
+    "registry_id": "PAYEE-CA-0012"
+  },
+  "purpose": "education",
+  "student": {
+    "name": "Asha Student (synthetic)",
+    "student_id": "MFU-2026-2208"
+  },
+  "type": "invoice"
+}

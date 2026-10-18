@@ -28,7 +28,7 @@ from rules.explain import explain_comparison, explain_markup, inr, tcs_sentence
 from security import Masker, ModelSawLog, ground_or_replace, prepare_for_model, scan
 from security.pki import TrustStore, verify_approval, split as split_signed
 
-from .model import OfflineModel, _date, json_to_text
+from .model import OfflineModel, _date, json_to_text, make_model
 from .pdf import pdf_to_text
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -103,7 +103,7 @@ def display_pan(token, masker):
 
 
 class Agent:
-    def __init__(self, evidence_dir=None, pin=None, clock=None):
+    def __init__(self, evidence_dir=None, pin=None, clock=None, model=None):
         self.pack = RulePack.load()
         self.trust = TrustStore()
         ev = Path(evidence_dir) if evidence_dir else None  # None: logs stay in memory only
@@ -113,7 +113,7 @@ class Agent:
         self.policy = Policy(pin or CONFIG["demo_pin"], CONFIG["per_payment_cap_usd"], CONFIG["breaker_threshold"])
         self.audit = AuditLog(ev and ev / "audit_log.jsonl")
         self.model_saw = ModelSawLog(ev and ev / "model_saw.log")
-        self.model = OfflineModel()
+        self.model = model or make_model()  # offline unless TUITIONPILOT_MODEL=claude
         self.family = Family(self.policy)
         self.sessions = {}
 
