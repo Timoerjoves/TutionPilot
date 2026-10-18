@@ -187,9 +187,11 @@ function renderRail() {
 
 function globalBanners() {
   const b = [];
+  const h = (V.handoffs || []).map((x) => `<div class="banner info"><b>Prepared by your student</b><span class="body">${esc(x.invoice_id)} · ${esc(x.amount)} · ${esc(x.payee)}</span>
+    <button class="btn sm primary" data-act="take-over" data-code="${esc(x.code)}">Open and review</button></div>`).join("");
   if (V.policy.emergency_stop) b.push(["deny", "Emergency stop is ON", "Every money action is denied until a parent turns it off in Settings."]);
   if (V.policy.frozen) b.push(["deny", "The agent is frozen", "Too many denied attempts in a row. A parent can reset it in Settings with the PIN."]);
-  return b.map(([k, t, d]) => `<div class="banner ${k}"><b>⛔ ${esc(t)}</b><span class="body">${esc(d)}</span></div>`).join("");
+  return h + b.map(([k, t, d]) => `<div class="banner ${k}"><b>⛔ ${esc(t)}</b><span class="body">${esc(d)}</span></div>`).join("");
 }
 
 /* ---------- 1. welcome ---------- */
@@ -410,8 +412,9 @@ function vSign() {
   if (payProgress) panel = `<section class="card"><h2>Sending in the sandbox…</h2><ul class="progress-list" style="margin-top:12px">${payProgress.map((x, i) =>
       `<li class="${x.ok ? "" : "bad"}" style="animation-delay:${i * 380}ms"><span class="ic">${x.ok ? "✓" : "✕"}</span><span><b>${esc(x.t)}</b><br><span class="muted small">${esc(x.d)}</span></span></li>`).join("")}</ul></section>`;
   else if (V.receipt) panel = `<section class="card"><h2>Paid ✓</h2><p class="muted">This plan was signed and paid in the sandbox.</p><button class="btn primary" data-go="receipt">See the receipt →</button></section>`;
-  else if (V.role !== "parent") panel = `<section class="card"><h2>Parent approval needed</h2><p class="muted">Students can review, not sign.${info("Only an enrolled parent device can sign a payment. Signing in as a student can never become a parent session; the server enforces it.")}</p>
-      <button class="btn" data-act="sign-out">Sign in as the parent</button></section>`;
+  else if (V.role !== "parent") panel = `<section class="card"><h2>${V.handoff_sent ? "Sent to your parents" : "Ready for a parent to sign"}</h2>
+      <p class="muted">${V.handoff_sent ? "A parent can open it on their own device." : "You prepared everything; a parent signs."}${info("Only an enrolled parent device can sign a payment. When a parent opens this, it moves to their device under a new session, so this device can never act as the parent.")}</p>
+      ${V.handoff_sent ? '<span class="badge ok">✓ Waiting for a parent</span>' : '<button class="btn primary" data-act="ask-parent">Ask a parent to sign</button>'}</section>`;
   else if (p.max_tier === "T4") panel = `<section class="card"><h2>Cannot be signed</h2><div class="banner deny"><b>T4: never allowed.</b><span class="body">Unverified payee.${info("No PIN or signature can allow paying an unverified payee. Confirm the university's details by phone, using a number from its official website.")}</span></div>
       <button class="btn danger" data-act="force-approve" style="margin-top:12px">Try to approve anyway</button></section>`;
   else if ((V.escalations || []).length) panel = `<section class="card"><h2>Needs a human first</h2>${V.escalations.map((e) => `<div class="banner deny" style="margin-top:10px"><span class="body">${esc(e.text)}</span></div>`).join("")}</section>`;
@@ -597,7 +600,7 @@ const EV = {
   route_chosen: "Route chosen", document_marked: "Document marked", duplicate_click: "Duplicate click ignored",
   bank_refused: "Bank refused", plan_tampered_demo: "Plan tampered (demo)", payment_refused: "Payment refused",
   untrusted_text_flagged: "Untrusted text flagged", signed_in: "Signed in with device key",
-  vault_upload: "Vault file stored (encrypted)", vault_open: "Vault file sent (still encrypted)",
+  vault_upload: "Vault file stored (encrypted)", handoff_requested: "Sent to a parent to sign", handoff_taken: "Parent opened the student's payment", vault_open: "Vault file sent (still encrypted)",
 };
 function describe(e) {
   const d = e.data || {};
@@ -812,6 +815,12 @@ document.addEventListener("click", async (ev) => {
     case "force-approve": return act("approve", { pin: "" }, { advance: false });
     case "print": return window.print();
     case "sign-out": return signOut();
+    case "ask-parent": return act("ask_parent", {}, { advance: false });
+    case "take-over": {
+      const r = await act("take_over", { code: t.dataset.code }, { advance: false });
+      if (r && r.result.session) { store.set("tp.session", r.result.session); V = (await api("GET", `/api/session/${r.result.session}`)).view; go("sign"); }
+      return;
+    }
     case "vault-open": return openDoc(t.dataset.doc);
     case "lab-all": for (const a of labList) await runLab(a.id); return;
     case "verify-audit": {

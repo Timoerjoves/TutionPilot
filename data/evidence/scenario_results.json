@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-18T05:59:13+00:00",
+  "generated_at": "2026-10-18T06:02:28+00:00",
   "rule_pack": {
     "id": "india-lrs-tcs",
-    "version": "2026.10.16-r1"
+    "version": "2026.10.18-r1"
   },
   "python": "3.14.6",
   "counts": {
@@ -88,8 +88,7 @@
       "status": "PASS",
       "actual": "TCS Rs 25000 on taxable Rs 500000 at 0.05; PAN question asked: True",
       "needs_verification": [
-        "tcs_base_excludes_fees",
-        "tcs_rate_no_pan"
+        "tcs_base_excludes_fees"
       ]
     },
     {
@@ -101,9 +100,7 @@
       "verify": false,
       "status": "PASS",
       "actual": "within_cap=False, headroom after USD -10000",
-      "needs_verification": [
-        "lrs_annual_cap_usd"
-      ]
+      "needs_verification": []
     },
     {
       "id": "A8",

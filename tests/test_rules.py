@@ -17,7 +17,9 @@ class TestRulePack(unittest.TestCase):
         for rule_id, r in PACK.rules.items():
             with self.subTest(rule=rule_id):
                 self.assertTrue(r["source"])
-                self.assertIn(r["status"], ("secondary-source", "unverified"))
+                self.assertIn(r["status"], ("verified", "secondary-source", "unverified"))
+                if r["status"] == "verified":  # only a primary government source can verify a rule
+                    self.assertRegex(r["source"], r"^https://www\.(rbi\.org\.in|incometaxindia\.gov\.in)/")
                 self.assertTrue(r["check_against"])
                 self.assertTrue(r["note"])
 
@@ -50,7 +52,8 @@ class TestTcs(unittest.TestCase):
     def test_A6_no_pan_uses_no_pan_rate_and_is_flagged(self):
         r = compute_tcs(PACK, 15 * LAKH, has_pan=False)
         self.assertEqual(r.tcs, 25000)
-        self.assertIn("tcs_rate_no_pan", r.needs_verification)
+        self.assertNotIn("tcs_rate_no_pan", r.needs_verification)  # verified against s.397(2)(b)(ii)
+        self.assertIn("tcs_base_excludes_fees", r.needs_verification)  # still needs a bank's confirmation
 
     def test_exactly_at_threshold_is_nil(self):
         self.assertEqual(compute_tcs(PACK, 10 * LAKH).tcs, 0)
@@ -101,8 +104,9 @@ class TestLrsCap(unittest.TestCase):
     def test_payment_exactly_at_cap_is_allowed(self):
         self.assertTrue(lrs_headroom(PACK, prior_usd=230000, amount_usd=20000).within_cap)
 
-    def test_cap_rule_is_marked_unverified(self):
-        self.assertIn("lrs_annual_cap_usd", lrs_headroom(PACK, 0, 1000).needs_verification)
+    def test_cap_rule_is_verified_against_rbi(self):
+        self.assertNotIn("lrs_annual_cap_usd", lrs_headroom(PACK, 0, 1000).needs_verification)
+        self.assertIn("rbi.org.in", PACK.rules["lrs_annual_cap_usd"]["source"])
 
     def test_negative_usd_rejected(self):
         with self.assertRaises(ValueError):

@@ -34,6 +34,8 @@ SESSION_ACTIONS = {
     "document": lambda a, sid, b: a.set_document(sid, b.get("key"), b.get("have")),
     "approve": lambda a, sid, b: a.approve(sid, b.get("pin"), b.get("approval")),
     "pay": lambda a, sid, b: a.pay(sid),
+    "ask_parent": lambda a, sid, b: a.request_parent(sid),
+    "take_over": lambda a, sid, b: a.take_over(sid, b.get("code")),
     "tamper_plan": lambda a, sid, b: a.tamper_plan(sid),
 }
 READ_ACTIONS = {  # compute only; the session is not changed

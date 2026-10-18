@@ -84,7 +84,7 @@ class TestEngineToContract(unittest.TestCase):
     def test_lrs_result_is_valid_and_flags_unverified_cap(self):
         msg = validate(lrs_result(PACK, lrs_headroom(PACK, 240000, 20000), 240000, 20000))
         self.assertFalse(msg["outputs"]["within_cap"])
-        self.assertIn("lrs_annual_cap_usd", msg["needs_verification"])
+        self.assertNotIn("lrs_annual_cap_usd", msg["needs_verification"])  # verified against the RBI Master Direction
 
     def test_landed_cost_result_is_valid(self):
         c = landed_cost(PACK, Route("Provider B", D("90.20"), fee_inr=D(3000)), 20000)

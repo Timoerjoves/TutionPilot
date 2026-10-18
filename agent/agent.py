@@ -116,6 +116,7 @@ class Agent:
         self.model = model or make_model()  # offline unless TUITIONPILOT_MODEL=claude
         self.family = Family(self.policy)
         self.sessions = {}
+        self.handoffs = {}  # one-time code -> session a student prepared and asked a parent to sign
 
     # ---------- sessions ----------
     def new_session(self, role="parent"):
@@ -671,6 +672,54 @@ class Agent:
             raise
         self._log("device_approved", {"code": str(code)[:12], "approver": s["device"]}, sid)
 
+    # ---------- student prepares, parent signs ----------
+    def request_parent(self, sid):
+        """A signed-in student hands a prepared payment to the parents. Only a parent device can then open it."""
+        s = self.get(sid)
+        if s["role"] != "student" or not s["device"]:
+            raise PermissionError("Only a signed-in student device can ask a parent to sign.")
+        if s["plan"] is None:
+            raise ValueError("finish the invoice and the questions first")
+        if not any(v == sid for v in self.handoffs.values()):
+            self.handoffs[uuid.uuid4().hex[:10]] = sid
+        self._log("handoff_requested", {"plan_id": s["plan"]["plan_id"], "plan_hash": s["plan"]["plan_hash"]}, sid)
+        self._say(s, "agent", "Sent to your parents: a signed-in parent device can now open this payment, review it and "
+                  "sign. This device can't sign or pay.", tone="ok")
+        return {"ok": True}
+
+    def handoff_list(self, s):
+        """What a signed-in parent sees: payments students prepared (no session ids)."""
+        if s["role"] != "parent" or not s["device"]:
+            return []
+        out = []
+        for code, sid in list(self.handoffs.items()):
+            t = self.sessions.get(sid)
+            if t is None or t["plan"] is None:
+                del self.handoffs[code]
+                continue
+            out.append({"code": code, "invoice_id": t["invoice"].get("invoice_id"),
+                        "amount": f"{t['invoice']['amount']['currency']} {t['invoice']['amount']['value']}",
+                        "payee": t["invoice"]["payee"].get("name"), "student_device": t["device"]})
+        return out
+
+    def take_over(self, sid, code):
+        """A signed-in parent opens a student's prepared payment. It moves to a NEW session id, so the student's old id
+        stops working and can never act with the parent's role."""
+        parent = self.get(sid)
+        if parent["role"] != "parent" or not parent["device"]:
+            raise PermissionError("Only a signed-in parent device can open a student's payment.")
+        old = self.handoffs.pop(str(code), None)
+        s = self.sessions.pop(old, None) if old else None
+        if s is None:
+            raise KeyError("no such request, or it was already opened")
+        new, student_device = uuid.uuid4().hex[:12], s["device"]
+        s.update(id=new, role="parent", signed_in="parent", device=parent["device"], approval=None)
+        self.sessions[new] = s
+        self._log("handoff_taken", {"from_student_device": student_device, "parent_device": parent["device"]}, new)
+        self._say(s, "agent", "A parent opened this payment. Review the plan, then sign it on this device.", tone="ok")
+        self._build_plan(s)  # a fresh plan id for the parent's review; the hash covers the same exact plan content
+        return {"ok": True, "session": new}
+
     def sign_in(self, nonce, kid, signature):
         """A new session for the device that signed the server's one-time challenge."""
         try:
@@ -891,6 +940,7 @@ class Agent:
             "explanation": s.get("explanation"), "lrs": s["lrs"], "draft": s["draft"], "plan": s["plan"],
             "plan_hash_now": plan_hash(s["plan"]) if s["plan"] else None,
             "approval": s["approval"], "txn": s["txn"], "receipt": s["receipt"],
+            "handoffs": self.handoff_list(s), "handoff_sent": any(v == sid for v in self.handoffs.values()),
             "documents": sorted(s["documents"]), "model_saw": s["model_saw"][-10:],
             "timeline": self.timeline(s), "policy": self.policy.status(),
             "events": [{"seq": e["seq"], "at": e["at"][11:19], "event": e["event"], "data": e["data"],

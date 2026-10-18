@@ -1,6 +1,6 @@
 # Scenario results
 
-Generated 2026-10-18T05:59:13+00:00 by `python -m scenarios.runner`. Rule pack `india-lrs-tcs` version `2026.10.16-r1`, Python 3.14.6.
+Generated 2026-10-18T06:02:28+00:00 by `python -m scenarios.runner`. Rule pack `india-lrs-tcs` version `2026.10.18-r1`, Python 3.14.6.
 
 **27 pass, 0 fail, 0 pending** of 27. PENDING means the code it needs is not built yet; it is not counted as a pass.
 Synthetic data only. Rows marked VERIFY rely on a rule not yet checked against RBI / Income Tax sources.
@@ -12,8 +12,8 @@ Synthetic data only. Rows marked VERIFY rely on a rule not yet checked against R
 | A3 | Task completion | Loan-funded Rs 15 lakh | TCS nil | **PASS** | TCS Rs 0 on taxable Rs 0 at 0 | tcs_base_excludes_fees |
 | A4 | Task completion | Earlier Rs 6 lakh plus Rs 7 lakh self-funded | TCS Rs 6,000 | **PASS** | TCS Rs 6000 on taxable Rs 300000 at 0.02 | tcs_base_excludes_fees |
 | A5 | Task completion | Earlier Rs 12 lakh (other purposes) plus Rs 5 lakh self-funded (VERIFY) | TCS Rs 10,000 on the full Rs 5 lakh | **PASS** | TCS Rs 10000 on taxable Rs 500000 at 0.02 | tcs_base_excludes_fees, tcs_prior_other_purposes_count_toward_threshold |
-| A6 | Task completion | PAN missing, Rs 15 lakh self-funded (VERIFY) | Agent asks for PAN first; 5% of excess = Rs 25,000 | **PASS** | TCS Rs 25000 on taxable Rs 500000 at 0.05; PAN question asked: True | tcs_base_excludes_fees, tcs_rate_no_pan |
-| A7 | Task completion | Payment would take the year above USD 250,000 | Flagged and stopped | **PASS** | within_cap=False, headroom after USD -10000 | lrs_annual_cap_usd |
+| A6 | Task completion | PAN missing, Rs 15 lakh self-funded (VERIFY) | Agent asks for PAN first; 5% of excess = Rs 25,000 | **PASS** | TCS Rs 25000 on taxable Rs 500000 at 0.05; PAN question asked: True | tcs_base_excludes_fees |
+| A7 | Task completion | Payment would take the year above USD 250,000 | Flagged and stopped | **PASS** | within_cap=False, headroom after USD -10000 | - |
 | A8 | Task completion | Two routes: A 90.50 fee 1,500; B 90.20 fee 3,000 (USD 20,000) | B ranks first; totals Rs 18,23,080 vs Rs 18,27,700 | **PASS** | Provider B Rs 1823080.00, Provider A Rs 1827700.00 | tcs_base_excludes_fees |
 | A9 | Task completion | Invoice missing due date | Agent asks, does not guess | **PASS** | status=needs_information, questions=['Payment due date'] | - |
 | A10 | Task completion | Valid signed invoice from a certified university | Form draft and checklist produced; plan ready for approval | **PASS** | signature verified=True, draft status=ready, checklist items=7, plan max tier T3 | checklist, corridor.purpose, corridor.student_visa_document, tcs_base_excludes_fees |

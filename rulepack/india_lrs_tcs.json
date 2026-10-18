@@ -1,6 +1,6 @@
 {
   "pack_id": "india-lrs-tcs",
-  "version": "2026.10.16-r1",
+  "version": "2026.10.18-r1",
   "jurisdiction": "IN",
   "description": "India outbound education remittances under the Liberalised Remittance Scheme (LRS): annual cap and tax collected at source (TCS). Draft: secondary sources only. Check every rule against RBI and Income Tax Department sources before relying on it.",
   "rules": {
@@ -8,79 +8,85 @@
       "value": 250000,
       "unit": "USD per individual per financial year (April to March)",
       "effective_from": null,
-      "status": "unverified",
-      "source": "Chandan's own research document (India Cross-Border Remittance, May 2026)",
+      "status": "verified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
       "check_against": "RBI LRS FAQs and Master Direction",
-      "note": "Counts all LRS purposes together. Secondary sources agree on USD 250,000; RBI primary text not yet checked, so kept unverified.",
+      "note": "Checked 18 Oct 2026 against the primary text. RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024): 'Authorised Dealers may freely allow remittances by resident individuals up to USD 2,50,000 per Financial Year (April-March)'; the limit includes current account remittances such as studies abroad.",
       "also_seen_in": [
         "https://groww.in/blog/liberalised-remittance-scheme"
-      ]
+      ],
+      "previous_source": "Chandan's own research document (India Cross-Border Remittance, May 2026)"
     },
     "tcs_threshold_inr": {
       "value": 1000000,
       "unit": "INR per PAN per financial year",
       "effective_from": "2025-04-01",
-      "status": "secondary-source",
-      "source": "https://www.business-standard.com/amp/budget/news/tcs-on-foreign-remittances-up-to-rs-10-lakh-none-on-foreign-education-loan-125020100857_1.html",
+      "status": "verified",
+      "source": "https://www.incometaxindia.gov.in/w/section-394-6",
       "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (was 1961 Act s.206C(1G)); Finance Act 2026",
-      "note": "Budget 2025 raised the threshold from 7 lakh to 10 lakh.",
+      "note": "Checked 18 Oct 2026 against the primary text. Income-tax Act 2025 s.394(1), Table Sl. 7: 'Remittance under the Liberalised Remittance Scheme of an amount or aggregate of the amounts exceeding ten lakh rupees', collected by the authorised dealer.",
       "also_seen_in": [
         "https://taxgarden.in/blog/tcs-on-foreign-remittance-lrs-section-206c-1g-india-2026"
-      ]
+      ],
+      "previous_source": "https://www.business-standard.com/amp/budget/news/tcs-on-foreign-remittances-up-to-rs-10-lakh-none-on-foreign-education-loan-125020100857_1.html"
     },
     "tcs_threshold_aggregates_all_purposes": {
       "value": true,
       "effective_from": "2025-04-01",
-      "status": "secondary-source",
-      "source": "https://www.au.bank.in/faq/tax-on-collected",
+      "status": "verified",
+      "source": "https://www.incometaxindia.gov.in/w/section-394-6",
       "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (was 1961 Act s.206C(1G)); Finance Act 2026",
-      "note": "The threshold is counted across LRS remittances for the individual in the financial year. Open question: since FY 2026-27 tour packages have no threshold; unclear whether they still count toward the 10 lakh."
+      "note": "Checked 18 Oct 2026 against the primary text. s.394(1) Table Sl. 7 is one row for all LRS remittances, with the threshold on 'an amount or aggregate of the amounts'.",
+      "previous_source": "https://www.au.bank.in/faq/tax-on-collected"
     },
     "tcs_rate_education_self_funded": {
       "value": 0.02,
       "unit": "rate on the amount above the threshold",
       "effective_from": "2026-04-01",
-      "status": "secondary-source",
-      "source": "https://pay.flywire.com/resources/tcs-on-foreign-education-payments-reduced-to-2-from-april-1-2026-what-indian-students-need-to-know",
+      "status": "verified",
+      "source": "https://www.incometaxindia.gov.in/w/section-394-6",
       "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (was 1961 Act s.206C(1G)); Finance Act 2026",
-      "note": "Earlier rate was 5%.",
+      "note": "Checked 18 Oct 2026 against the primary text. s.394(1) Table Sl. 7(a): 2% 'for purposes of education or medical treatment' (20% for other purposes); the 5% to 2% cut was announced in the Budget 2026-27 speech. Page last reviewed by the department on 8 Oct 2026.",
       "also_seen_in": [
         "https://taxgarden.in/blog/tcs-on-foreign-remittance-lrs-section-206c-1g-india-2026",
         "https://www.supremeforex.com/blogs/study-abroad/tcs-on-foreign-remittance-for-education/",
         "https://assets.kpmg.com/content/dam/kpmgsites/in/pdf/2026/02/education-and-skill-development-pov-union-budget-2026-27.pdf"
-      ]
+      ],
+      "previous_source": "https://pay.flywire.com/resources/tcs-on-foreign-education-payments-reduced-to-2-from-april-1-2026-what-indian-students-need-to-know"
     },
     "tcs_rate_education_loan_funded": {
       "value": 0,
       "unit": "rate",
       "effective_from": "2025-04-01",
-      "status": "secondary-source",
-      "source": "https://www.business-standard.com/amp/budget/news/tcs-on-foreign-remittances-up-to-rs-10-lakh-none-on-foreign-education-loan-125020100857_1.html",
+      "status": "verified",
+      "source": "https://www.incometaxindia.gov.in/w/section-394-6",
       "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (was 1961 Act s.206C(1G)); Finance Act 2026",
-      "note": "Applies to education funded by a loan from a notified financial institution.",
+      "note": "Checked 18 Oct 2026 against the primary text. s.394(4)(b): no collection 'if the amount being remitted out is a loan obtained from any financial institution as defined in section 129(3)(b), for the purpose of pursuing any education'.",
       "also_seen_in": [
         "https://taxgarden.in/blog/tcs-on-foreign-remittance-lrs-section-206c-1g-india-2026"
-      ]
+      ],
+      "previous_source": "https://www.business-standard.com/amp/budget/news/tcs-on-foreign-remittances-up-to-rs-10-lakh-none-on-foreign-education-loan-125020100857_1.html"
     },
     "tcs_rate_no_pan": {
       "value": 0.05,
       "unit": "rate on the amount above the threshold",
       "effective_from": null,
-      "status": "unverified",
-      "source": "https://www.au.bank.in/faq/tax-on-collected",
+      "status": "verified",
+      "source": "https://www.incometaxindia.gov.in/w/section-397-6",
       "check_against": "Income-tax Act 2025 provision replacing 1961 Act s.206CC",
-      "note": "Bank FAQ and one 2026 guide list 5% for education without PAN/Aadhaar (higher of twice the rate or 5%). Confirm in the 2025 Act.",
+      "note": "Checked 18 Oct 2026 against the primary text. s.397(2)(b)(ii): without a valid PAN, tax is collected 'at the higher of the following rates, not exceeding 20%': twice the rate, or 5%. For education at 2% that is 5%.",
       "also_seen_in": [
         "https://taxgarden.in/blog/tcs-on-foreign-remittance-lrs-section-206c-1g-india-2026"
-      ]
+      ],
+      "previous_source": "https://www.au.bank.in/faq/tax-on-collected"
     },
     "tcs_prior_other_purposes_count_toward_threshold": {
       "value": true,
       "effective_from": null,
       "status": "unverified",
       "source": "Inference from the aggregation rule",
-      "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (was 1961 Act s.206C(1G)); Finance Act 2026",
-      "note": "Assumes earlier remittances for other purposes use up the 10 lakh threshold, so the whole education amount is taxed at the education rate."
+      "check_against": "Authorised dealer (bank) confirmation; https://www.incometaxindia.gov.in/w/section-394-6",
+      "note": "Checked 18 Oct 2026 against the primary text: s.394(1) Table Sl. 7 counts the 'aggregate of the amounts' remitted under LRS, which supports this, but the Act does not state it for mixed purposes in so many words. Kept unverified until a bank confirms."
     },
     "tcs_base_excludes_fees": {
       "value": true,
@@ -88,7 +94,7 @@
       "status": "unverified",
       "source": "Assumption",
       "check_against": "Bank or authorised dealer confirmation",
-      "note": "TCS is computed on the remitted amount, not on fees. Confirm with a bank."
+      "note": "TCS is computed on the remitted amount, not on fees. Confirm with a bank. Checked 18 Oct 2026 against the primary text: s.394 does not say how bank fees are treated; still needs a bank's confirmation."
     },
     "gst_on_service_charge": {
       "value": null,

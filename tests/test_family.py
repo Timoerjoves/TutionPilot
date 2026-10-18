@@ -201,3 +201,59 @@ class TestFamily(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStudentPreparesParentSigns(unittest.TestCase):
+    """Topic C's own user does the work; only a parent device can sign it."""
+
+    def setUp(self):
+        global A
+        A = self.a = Agent()
+        self.assertTrue(self.a.register_device(PIN, "parent", fx.PARENT_PUBLIC, box()).allowed)
+        self.parent = kid_of(fx.PARENT_PUBLIC)
+        nonce = self.a.family.challenge()
+        req = {"role": "student", "public_key": STUDENT_PUBLIC, "box_key": box(), "label": "laptop", "nonce": nonce}
+        from app.family import enrolment_bytes
+        self.a.family._challenges[nonce] = 1e18
+        self.assertTrue(self.a.family.register(PIN, **{k: req[k] for k in ("role", "public_key", "box_key", "label")},
+                                               nonce=nonce, approver=self.parent,
+                                               signature=sign_bytes(fx.PARENT_SECRET, enrolment_bytes(req))).allowed)
+        self.student = kid_of(STUDENT_PUBLIC)
+
+    def sign_in(self, secret, kid):
+        nonce = self.a.family.challenge()
+        return self.a.sign_in(nonce, kid, sign_bytes(secret, SIGN_IN_CONTEXT + nonce.encode()))
+
+    def test_student_prepares_parent_opens_signs_and_pays(self):
+        from tests.test_app import FAMILY
+        st = self.sign_in(STUDENT_SECRET, self.student)
+        self.a.consent(st["id"], True)
+        self.a.upload_invoice(st["id"], sample="valid_us")
+        for field, value in FAMILY:
+            self.a.answer(st["id"], field, value)
+        self.assertEqual(self.a.approve(st["id"], PIN, None)["code"], "role")  # a student can never sign
+        self.a.request_parent(st["id"])
+        student_sid = st["id"]
+        p = self.sign_in(fx.PARENT_SECRET, self.parent)
+        [h] = self.a.view(p["id"])["handoffs"]
+        self.assertEqual(h["invoice_id"], "INV-SYN-0001")
+        new = self.a.take_over(p["id"], h["code"])["session"]
+        with self.assertRaises(KeyError):  # the student's old session id no longer works
+            self.a.get(student_sid)
+        s = self.a.get(new)
+        self.assertEqual((s["role"], s["device"]), ("parent", self.parent))
+        self.assertTrue(self.a.approve(new, PIN, fx.parent_approval(s["plan"]))["ok"])
+        self.assertTrue(self.a.pay(new)["ok"])
+
+    def test_only_the_right_roles_can_hand_off_and_take_over(self):
+        p = self.sign_in(fx.PARENT_SECRET, self.parent)
+        st = self.sign_in(STUDENT_SECRET, self.student)
+        with self.assertRaises(ValueError):  # nothing prepared yet
+            self.a.request_parent(st["id"])
+        with self.assertRaises(PermissionError):  # a parent session is not a student
+            self.a.request_parent(p["id"])
+        with self.assertRaises(PermissionError):  # a student can't open handoffs
+            self.a.take_over(st["id"], "anything")
+        with self.assertRaises(KeyError):
+            self.a.take_over(p["id"], "no-such-code")
+        self.assertEqual(self.a.view(st["id"])["handoffs"], [])  # students never see the list
