@@ -648,10 +648,28 @@ class Agent:
                                  "max_tier": plan["max_tier"]}, s["id"])
 
     # ---------- devices, sign-in, vault ----------
-    def register_device(self, pin, role, public_key, box_key, label=""):
-        d = self.family.register(pin, role, public_key, box_key, label)
+    def register_device(self, pin, role, public_key, box_key, label="", code=None):
+        """Bootstrap (first parent device, PIN only) or finish a request a parent device signed (code + PIN)."""
+        d = self.family.finish_enrolment(pin, code) if code else self.family.register(pin, role, public_key, box_key, label)
         self._log("device_registered" if d.allowed else "device_refused", {**d.to_dict(), "role": role})
         return d
+
+    def request_device(self, role, public_key, box_key, label=""):
+        code = self.family.request_enrolment(role, public_key, box_key, label)
+        self._log("device_requested", {"role": role, "code": code})
+        return code
+
+    def approve_device(self, sid, code, signature):
+        """A signed-in parent device signs a new device's enrolment request."""
+        s = self.get(sid)
+        if s["role"] != "parent" or not s["device"]:
+            raise PermissionError("Only a signed-in parent device can approve a new device.")
+        try:
+            self.family.approve_enrolment(code, s["device"], signature)
+        except PermissionError as e:
+            self._log("device_approval_refused", {"code": str(code)[:12], "reason": str(e)}, sid)
+            raise
+        self._log("device_approved", {"code": str(code)[:12], "approver": s["device"]}, sid)
 
     def sign_in(self, nonce, kid, signature):
         """A new session for the device that signed the server's one-time challenge."""
@@ -708,6 +726,9 @@ class Agent:
             self._log("approval_refused", {"reason": "escalated", "codes": [e["code"] for e in s["escalations"]]}, sid)
             return {"ok": False, "code": "escalated",
                     "reason": "This plan needs a human first: " + " ".join(e["text"] for e in s["escalations"])}
+        if self.policy.frozen:
+            self._log("approval_refused", {"reason": "circuit breaker"}, sid)
+            return {"ok": False, "code": "circuit_breaker", "reason": "The agent is frozen. A parent must reset it with the PIN."}
         if not self.policy.verify_pin(pin):
             self.policy._count_denial("T3")
             self._log("approval_refused", {"reason": "wrong PIN", "denied_in_a_row": self.policy.denied_in_a_row}, sid)

@@ -40,6 +40,8 @@ READ_ACTIONS = {  # compute only; the session is not changed
     "whatif": lambda a, sid, b: a.whatif(sid, b.get("prior_inr"), b.get("funding"), b.get("has_pan")),
     "vault_list": lambda a, sid, b: a.vault_list(sid),
     "vault_get": lambda a, sid, b: a.vault_get(sid, b.get("doc_id")),
+    "enrol_request": lambda a, sid, b: a.family.enrolment_request(b.get("code")),
+    "enrol_approve": lambda a, sid, b: a.approve_device(sid, b.get("code"), b.get("signature")) or {"ok": True},
 }
 
 
@@ -102,7 +104,7 @@ def make_handler(agent):
             if path == "/api/lab":
                 return {"attacks": lab.listing()}
             if path == "/api/devices":  # public keys only: needed to share a vault file with a device
-                return {"devices": agent.family.listing()}
+                return {"devices": agent.family.listing(), "bootstrap": not agent.policy.parent_keys}
             if path == "/api/trust":
                 return {"root": agent.trust.root, "revoked": sorted(agent.trust.revoked)}
             raise KeyError("not found")
@@ -120,17 +122,18 @@ def make_handler(agent):
                     if path == "/api/auth/sign_in":
                         s = agent.sign_in(body.get("nonce"), body.get("key_id"), body.get("signature"))
                         return self._send(200, {"view": agent.view(s["id"])})
+                    if path == "/api/devices/request":  # a new device asks; a signed-in parent device approves
+                        code = agent.request_device(body.get("role"), body.get("public_key"), body.get("box_key"),
+                                                    body.get("label", "browser"))
+                        return self._send(200, {"code": code})
                     if path == "/api/devices":
                         d = agent.register_device(body.get("pin"), body.get("role"), body.get("public_key"),
-                                                  body.get("box_key"), body.get("label", "browser"))
+                                                  body.get("box_key"), body.get("label", "browser"), body.get("code"))
                         return self._send(200, {"result": d.to_dict(), "devices": agent.family.listing()})
                     if path == "/api/settings":
                         d = agent.settings(body.get("pin"), per_payment_cap_usd=body.get("per_payment_cap_usd"),
                                            emergency_stop=body.get("emergency_stop"),
                                            reset_breaker=bool(body.get("reset_breaker")))
-                        return self._send(200, {"result": d.to_dict(), "policy": agent.policy.status()})
-                    if path == "/api/parent_key":
-                        d = agent.register_parent_key(body.get("pin"), body.get("public_key"), body.get("label", "browser"))
                         return self._send(200, {"result": d.to_dict(), "policy": agent.policy.status()})
                     m = re.fullmatch(r"/api/lab/([A-Z][0-9])", path)
                     if m:

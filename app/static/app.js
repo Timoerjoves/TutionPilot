@@ -9,6 +9,7 @@ let view = store.get("tp.view", "welcome");
 let side = store.get("tp.side", "live");
 let busy = false;
 let seenSeq = Number(store.get("tp.seen", "0"));
+let enrolReq = null;                  // a new device's enrolment request this parent device is looking at
 let device = null;                    // this role's device keys from IndexedDB (see common.js)
 let vaultDocs = null;                 // vault listing for this device
 let pin = "";
@@ -67,7 +68,8 @@ function isoNow() {
 
 const deviceRegistered = () => device && V && V.policy.parent_keys.includes(device.keyId);
 
-async function setUpDevice(pinValue) {  // enrol this browser as a parent device (needs the PIN)
+async function setUpDevice(pinValue) {  // only the first parent device enrols here with the PIN alone
+  if (V.policy.parent_keys.length) throw new Error("A parent device is already set up. Enrol new devices from the sign-in page; a signed-in parent approves them in Settings.");
   device = await enrolDevice("parent", pinValue, "Parent's browser");
   await refresh();
   return { reason: `Parent device ${device.keyId} enrolled.` };
@@ -730,8 +732,12 @@ function renderSettings() {
     <div class="setting"><label for="s-pin"><b>Parent PIN</b></label><input id="s-pin" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off"></div>
     <div class="setting"><b>Parent signing devices</b>
       <span class="muted small">${p.parent_keys.length ? p.parent_keys.map((k) => `<span class="mono">${esc(k)}</span>${device && device.keyId === k ? " (this browser)" : ""}`).join("<br>") : "None registered yet."}</span>
-      <div class="row"><button class="btn sm" data-set="device">${device ? (deviceRegistered() ? "Re-register this browser" : "Register this browser") : "Create key in this browser"}</button>
+      <div class="row">${p.parent_keys.length ? "" : `<button class="btn sm" data-set="device">${device ? "Register this browser" : "Create key in this browser"}</button>`}
         ${device ? '<button class="btn sm danger" data-set="forget">Forget this browser\'s key</button>' : ""}</div></div>
+    ${V.role === "parent" && deviceRegistered() ? `<div class="setting"><label for="s-code"><b>Approve a new device${info("The new device shows a code on the sign-in page. Check the details, then this browser signs that exact request. The new device still needs the PIN to finish.")}</b></label>
+      ${enrolReq ? `<span class="muted small">${esc(enrolReq.role)} device “${esc(enrolReq.label)}”<br><span class="mono">${esc(enrolReq.key_id)}</span></span>
+        <div class="row"><button class="btn sm primary" data-set="enrol-sign">Approve</button><button class="btn sm" data-set="enrol-cancel">Cancel</button></div>`
+      : `<div class="row"><input id="s-code" type="text" maxlength="9" placeholder="ABCD-1234" autocomplete="off" style="width:120px"><button class="btn sm" data-set="enrol-find">Look up</button></div>`}</div>` : ""}
     <div class="setting"><b>Emergency stop${info("Denies every money action at once.")}</b>
       <div class="row"><span class="badge ${p.emergency_stop ? "deny" : "ok"}">${p.emergency_stop ? "ON" : "off"}</span>
         <button class="btn sm ${p.emergency_stop ? "" : "danger"}" data-set="stop">${p.emergency_stop ? "Turn off" : "Turn on"}</button></div></div>
@@ -745,6 +751,16 @@ async function changeSetting(kind) {
   const pinValue = $("#s-pin").value;
   try {
     if (kind === "device") { const r = await setUpDevice(pinValue); toast(r.reason); }
+    else if (kind === "enrol-find") {
+      const code = $("#s-code").value;
+      enrolReq = { ...(await api("POST", `/api/session/${V.id}/enrol_request`, { code })).result, code };
+    }
+    else if (kind === "enrol-cancel") enrolReq = null;
+    else if (kind === "enrol-sign") {
+      await api("POST", `/api/session/${V.id}/enrol_approve`, { code: enrolReq.code, signature: await signEnrolment(device, enrolReq) });
+      toast(`Approved ${enrolReq.role} device ${enrolReq.key_id}. It can now finish with the PIN.`);
+      enrolReq = null;
+    }
     else if (kind === "forget") { await idb.del(V.role); device = null; toast("This browser's key was deleted. Enrol it again to sign in."); }
     else {
       const body = { pin: pinValue };

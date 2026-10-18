@@ -64,6 +64,11 @@ class TestServer(unittest.TestCase):
         self.assertFalse(r["result"]["allowed"])
         code, r = self.post("/api/devices", {"pin": CONFIG["demo_pin"], "role": "parent", "public_key": fx.PARENT_PUBLIC, "box_key": box})
         self.assertTrue(r["result"]["allowed"])
+        self.assertEqual(self.post("/api/parent_key", {"pin": CONFIG["demo_pin"], "public_key": fx.PARENT_PUBLIC})[0], 404)
+        other = base64.b64encode(os.urandom(32)).decode()  # a second device: PIN alone is no longer enough
+        code, r2 = self.post("/api/devices", {"pin": CONFIG["demo_pin"], "role": "parent", "public_key": other, "box_key": box})
+        self.assertEqual(r2["result"]["code"], "stale_request")
+        self.post("/api/settings", {"pin": CONFIG["demo_pin"], "reset_breaker": True})  # those refusals count as denials
         kid = r["devices"][0]["key_id"]
         nonce = self.post("/api/auth/challenge")[1]["nonce"]
         sig = sign_bytes(fx.PARENT_SECRET, SIGN_IN_CONTEXT + nonce.encode())

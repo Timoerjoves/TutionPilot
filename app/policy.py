@@ -62,6 +62,8 @@ class Policy:
 
     def _register_key(self, pin, public_key_b64, label, keys, who):
         action = f"register_{who.lower()}_key"
+        if self.frozen:
+            return Decision(False, action, "T4", "circuit_breaker", "The agent is frozen: reset it with the PIN first.")
         if not self.verify_pin(pin):
             self._count_denial("T4")
             return Decision(False, action, "T4", "bad_pin", "Wrong PIN: device not registered.")
@@ -75,11 +77,17 @@ class Policy:
         keys[kid] = public_key_b64
         return Decision(True, action, "T2", "ok", f"{who} signing key {kid} registered ({label}).")
 
-    def verify_pin(self, pin):
+    def verify_pin(self, pin, *, frozen_ok=False):
+        """While the breaker is frozen every PIN check fails, except the reset in change_settings()."""
+        if self.frozen and not frozen_ok:
+            return False
         return pin is not None and hmac.compare_digest(_hash_pin(pin, self._salt), self._pin_hash)
 
     def change_settings(self, pin, *, per_payment_cap_usd=None, emergency_stop=None, reset_breaker=False):
-        if not self.verify_pin(pin):
+        if self.frozen and not reset_breaker:
+            return Decision(False, "change_settings", "T4", "circuit_breaker",
+                            "The agent is frozen: the only change allowed is a breaker reset with the PIN.")
+        if not self.verify_pin(pin, frozen_ok=True):
             self._count_denial("T4")
             return Decision(False, "change_settings", "T4", "bad_pin", "Wrong PIN: settings unchanged.")
         changed = []

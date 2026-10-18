@@ -82,14 +82,28 @@ async function makeDevice(role) {
   return { role, privateKey: sig.privateKey, publicKey: b64(raw), keyId: "ed25519:" + (await sha256hex(raw)).slice(0, 16),
     boxPrivate: box.privateKey, boxPublic: b64(new Uint8Array(await crypto.subtle.exportKey("raw", box.publicKey))) };
 }
-/* Enrol this browser for a role. The parent's PIN is needed for either role. */
-async function enrolDevice(role, pin, label) {
+/* Enrol this browser for a role. Only the first parent device enrols with the PIN alone; every later device
+   first asks for a code (requestEnrolment), a signed-in parent device signs that request, then this browser
+   finishes with the PIN and the code. */
+async function enrolDevice(role, pin, label, code) {
   const d = (await loadDevice(role)) || await makeDevice(role);
-  const r = await api("POST", "/api/devices", { pin, role, public_key: d.publicKey, box_key: d.boxPublic, label });
+  const body = code ? { pin, code } : { pin, role, public_key: d.publicKey, box_key: d.boxPublic, label };
+  const r = await api("POST", "/api/devices", body);
   if (!r.result.allowed) throw new Error(r.result.reason);
   await idb.put(role, d);
   return d;
 }
+async function requestEnrolment(role, label) {
+  const d = (await loadDevice(role)) || await makeDevice(role);
+  await idb.put(role, d);  // kept now: the finish step must use the same key the parent signed for
+  return (await api("POST", "/api/devices/request", { role, public_key: d.publicKey, box_key: d.boxPublic, label })).code;
+}
+const ENROL_CONTEXT = "tuitionpilot-enrol-device:";  // must match app/family.py
+async function signEnrolment(d, req) {  // a parent device approves exactly this role, keys, label and nonce
+  const msg = canon({ role: req.role, public_key: req.public_key, box_key: req.box_key, label: req.label, nonce: req.nonce });
+  return b64(new Uint8Array(await crypto.subtle.sign({ name: "Ed25519" }, d.privateKey, utf8(ENROL_CONTEXT + msg))));
+}
+const showCode = (c) => c.slice(0, 4) + "-" + c.slice(4);
 /* Passwordless sign-in: sign the server's one-time challenge. Returns the new session view. */
 async function signInWith(d) {
   const { nonce } = await api("POST", "/api/auth/challenge", {});

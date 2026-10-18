@@ -1,9 +1,11 @@
 "use strict";
 /* Sign-in page: pick parent or student, then either sign in with this browser's enrolled key,
-   or enrol this browser first (needs the parent's PIN). */
+   or enrol this browser first. The first parent device needs only the PIN; every later device shows a code
+   that a signed-in parent device approves, then finishes with the PIN. */
 
 let role = store.get("tp.role", "parent") === "student" ? "student" : "parent";
-let device = null, enrolled = false, supported = true, busy = false;
+let device = null, enrolled = false, supported = true, busy = false, bootstrap = false;
+const codeKey = () => "tp.enrol." + role;  // the pending enrolment code survives a reload
 
 function toast(msg, bad = false) {
   const t = $("#toast");
@@ -17,7 +19,9 @@ function toast(msg, bad = false) {
 async function load() {
   supported = await cryptoSupported();
   device = supported ? await loadDevice(role) : null;
-  const devices = supported ? (await api("GET", "/api/devices")).devices : [];
+  const r = supported ? await api("GET", "/api/devices") : { devices: [] };
+  const devices = r.devices;
+  bootstrap = !!r.bootstrap;
   enrolled = !!device && devices.some((d) => d.key_id === device.keyId);
   render();
 }
@@ -33,15 +37,33 @@ function render() {
         <div class="mono faint">${esc(device.keyId)}</div></div></div>
       <button class="btn primary big wide" data-do="signin" ${busy ? "disabled" : ""}>${busy ? "Signing…" : "Sign in with this device"}</button>
       <p class="faint tiny center">Signs a one-time challenge${info("The server sends a random challenge that works once and expires in two minutes. Your browser signs it with its private key; the server checks the signature with the public key it stored when this device was enrolled.")}</p>`;
-  } else {
-    body = `<p class="muted small">${role === "parent" ? "Set up this browser as a parent device." : "Ask a parent to enter their PIN to approve this device."}
-        ${info(role === "parent" ? "This browser makes two key pairs: one to sign, one to unlock vault files. Only the public halves are sent. Parent devices can sign payment plans." : "Student devices can sign in, follow the payment and share files with parents. They can never approve a payment or change limits.")}</p>
+  } else if (bootstrap && role === "parent") {
+    body = `<p class="muted small">Set up this browser as the first parent device.
+        ${info("This browser makes two key pairs: one to sign, one to unlock vault files. Only the public halves are sent. Parent devices can sign payment plans. Only this first device is set up with the PIN alone; later devices also need this one's approval.")}</p>
       <form id="enrol" class="stack" autocomplete="off">
-        <label class="field-in"><span>Device name</span><input id="label" maxlength="40" value="${role === "parent" ? "Parent's browser" : "Student's laptop"}"></label>
+        <label class="field-in"><span>Device name</span><input id="label" maxlength="40" value="Parent's browser"></label>
         <label class="field-in"><span>Parent PIN</span><input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" required></label>
         <button class="btn primary big wide" ${busy ? "disabled" : ""}>${busy ? "Setting up…" : "Set up & sign in"}</button>
       </form>
       <p class="faint tiny center">Demo PIN is in the README</p>`;
+  } else if (bootstrap) {
+    body = `<div class="banner warn"><b>No parent device yet.</b><span class="body">Set up a parent device first, then it can approve this one.</span></div>`;
+  } else if (!store.get(codeKey())) {
+    body = `<p class="muted small">New devices need approval from a parent device that is already signed in.
+        ${info(role === "parent" ? "Parent devices can sign payment plans, so a new one needs the PIN and a signature from an existing parent device." : "Student devices can sign in, follow the payment and share files with parents. They can never approve a payment or change limits.")}</p>
+      <form id="request" class="stack" autocomplete="off">
+        <label class="field-in"><span>Device name</span><input id="label" maxlength="40" value="${role === "parent" ? "Parent's browser" : "Student's laptop"}"></label>
+        <button class="btn primary big wide" ${busy ? "disabled" : ""}>${busy ? "Asking…" : "Ask a parent to approve"}</button>
+      </form>`;
+  } else {
+    body = `<p class="muted small">On a signed-in parent device open <b>Settings → Approve a new device</b> and enter this code (valid 10 minutes):</p>
+      <div class="key-card"><span class="key-ico" aria-hidden="true">🔑</span><div><b class="mono" style="font-size:22px">${esc(showCode(store.get(codeKey())))}</b>
+        <div class="mono faint">${esc(device ? device.keyId : "")}</div></div></div>
+      <form id="enrol" class="stack" autocomplete="off">
+        <label class="field-in"><span>Parent PIN</span><input id="pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" required></label>
+        <button class="btn primary big wide" ${busy ? "disabled" : ""}>${busy ? "Finishing…" : "Approved: finish & sign in"}</button>
+      </form>
+      <p class="faint tiny center"><button type="button" class="link" data-do="restart">Start over with a new code</button></p>`;
   }
   $("#auth").innerHTML = `<h2 class="auth-title"><b>Sign in</b> to TuitionPilot</h2>${tabs}<div class="stack" style="margin-top:20px">${body}</div>`;
 }
@@ -61,15 +83,24 @@ document.addEventListener("click", (ev) => {
   if (!t || busy) return;
   if (t.dataset.pick && t.dataset.pick !== role) { role = t.dataset.pick; store.set("tp.role", role); return load(); }
   if (t.dataset.do === "signin") signIn();
+  if (t.dataset.do === "restart") { store.del(codeKey()); render(); }
 });
 document.addEventListener("submit", async (ev) => {
   ev.preventDefault();
   if (busy) return;
   busy = true;
-  const pin = $("#pin").value, label = $("#label").value.trim();
+  const pin = $("#pin") && $("#pin").value, label = $("#label") && $("#label").value.trim();
+  const code = ev.target.id === "enrol" ? store.get(codeKey()) : null;
   render();
   try {
-    device = await enrolDevice(role, pin, label);
+    if (ev.target.id === "request") {
+      store.set(codeKey(), await requestEnrolment(role, label));
+      device = await loadDevice(role);
+      busy = false;
+      return render();
+    }
+    device = await enrolDevice(role, pin, label, code);
+    store.del(codeKey());
     enrolled = true;
     busy = false;
     await signIn();
