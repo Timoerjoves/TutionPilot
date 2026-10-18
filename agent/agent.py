@@ -698,7 +698,7 @@ class Agent:
                 del self.handoffs[code]
                 continue
             out.append({"code": code, "invoice_id": t["invoice"].get("invoice_id"),
-                        "amount": f"{t['invoice']['amount']['currency']} {t['invoice']['amount']['value']}",
+                        "amount": f"{t['invoice']['amount']['currency']} {D(t['invoice']['amount']['value']):,.2f}",
                         "payee": t["invoice"]["payee"].get("name"), "student_device": t["device"]})
         return out
 

@@ -65,7 +65,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 - A landing page and a calmer, minimal interface.
 
 **Numbers (18 Oct 2026):**
-- 228 tests pass.
+- 239 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
 - The demo audit chain has 153 entries and verifies.
@@ -80,7 +80,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 | Innovation & interaction | 30% | Signatures replace payee lists; India-specific TCS/LRS engine; guided UI with live agent panel, what-if sliders and an attack lab |
 
 ## Honest limits
-- **Tax rules:** some are still unverified or from secondary sources; outputs say so.
+- **Tax rules:** six verified against RBI and the Income-tax Act 2025 on 18 Oct; two still need a bank's confirmation, and outputs say so.
 - **The AI step:** an offline stand-in; no hosted model is connected yet.
 - **Signing code:** our Ed25519 is not hardened, and the demo keys are synthetic.
 

@@ -600,7 +600,7 @@ const EV = {
   route_chosen: "Route chosen", document_marked: "Document marked", duplicate_click: "Duplicate click ignored",
   bank_refused: "Bank refused", plan_tampered_demo: "Plan tampered (demo)", payment_refused: "Payment refused",
   untrusted_text_flagged: "Untrusted text flagged", signed_in: "Signed in with device key",
-  vault_upload: "Vault file stored (encrypted)", handoff_requested: "Sent to a parent to sign", handoff_taken: "Parent opened the student's payment", vault_open: "Vault file sent (still encrypted)",
+  vault_upload: "Vault file stored (encrypted)", handoff_requested: "Sent to a parent to sign", device_requested: "New device asked to join", device_approved: "Parent device approved a new device", device_registered: "Device enrolled", device_refused: "Device enrolment refused", handoff_taken: "Parent opened the student's payment", vault_open: "Vault file sent (still encrypted)",
 };
 function describe(e) {
   const d = e.data || {};

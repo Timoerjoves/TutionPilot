@@ -55,10 +55,10 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
 9. **Family vault** (left): add a document; it is encrypted in this browser before upload, for the devices you choose.
 10. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each.
 11. **Agent, live** panel: every step and policy decision as it happens, the rule trace with sources, what the AI saw (masked) and the audit chain.
-12. Sign in as a **Student** on an approved device: a student can review everything but never sign or pay.
+12. Sign in as a **Student** on an approved device: the student can upload the invoice, answer the questions and tap *Ask a parent to sign*. A signed-in parent then sees *Prepared by your student* and opens it on their own device to sign. A student can never sign or pay.
 
 ## Tests and evidence
-    python -m unittest discover -s tests -t . -v      # 228 tests
+    python -m unittest discover -s tests -t . -v      # 239 tests
     python -m scenarios.runner                         # 27 scenarios -> data/evidence/scenario_results.md
     python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log of 153 entries, model log)
     python -m app.audit verify data/evidence/demo/audit_log.jsonl
@@ -72,7 +72,8 @@ GitHub Actions runs all of these on every push (`.github/workflows/tests.yml`).
 - Every number with a right answer (tax, cost, limits) comes from tested Python.
 - The model adapter only reads the invoice and words explanations, and it sees masked text only.
 - Any number in its wording must match the engine, or the engine's own text is shown instead.
-- By default the adapter is an offline, deterministic stand-in (`agent/model.py`), so the demo needs no API key and no network.
+- By default the adapter is an offline, deterministic reader (`agent/model.py`), so the demo needs no API key and no network.
+- **Optional hosted Claude:** `pip install anthropic`, set `ANTHROPIC_API_KEY`, then run with `TUITIONPILOT_MODEL=claude`. Claude gets masked text only, may only fill fields the offline reader missed, every value must appear verbatim in the invoice and is marked for the family to confirm, and any failure falls back to offline.
 
 | Tier | Allowed | Approval |
 |---|---|---|
@@ -96,17 +97,18 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 | `rulepack/` | Versioned rules with source, status and effective date |
 | `rules/` | Rules engine (LRS, TCS, year-to-date, landed cost, routes) and line-by-line explanations |
 | `security/` | Signatures (Ed25519, trust chain), masking + what-the-model-saw log, untrusted-text scanner, grounding check |
-| `forms/`, `corridors/` | A2-style draft and checklist; India→USA and India→UK destination config |
+| `forms/`, `corridors/` | A2-style draft and checklist; India to USA, UK, Canada and Australia destination config |
 | `agent/` | The agent (plan, next action, questions, escalation, receipt), the model adapter and the PDF text reader (`agent/pdf.py`) |
 | `app/` | Sandbox bank, policy engine, audit log, attack lab, device sign-in and encrypted vault (`app/family.py`), web server and UI (`app/static/`: landing, sign-in, app) |
 | `contract/` | Shared message shapes, validation, plan hash |
 | `scenarios/` | The 27-scenario runner and synthetic fixtures |
 | `data/` | Sample messages, signed sample invoices, drag-and-drop test invoices (`data/invoices/upload/`), trust root and certificates (`data/trust/`), evidence |
-| `tests/` | 228 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
+| `tests/` | 239 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
 | `docs/` | Contract, technical docs, security self-assessment, demo script |
 
 ## Licences
 - **Application code:** Python standard library only, with no third-party packages. Python is under the PSF License. The browser code uses only built-in Web Crypto (Ed25519, X25519, AES-GCM, HKDF); no JavaScript libraries.
+- **Optional hosted model:** the `anthropic` Python SDK (MIT licence) is used only if you set `TUITIONPILOT_MODEL=claude`; the app never needs it.
 - **Sample PDFs only:** `data/invoices/make_invoices.py` uses ReportLab (BSD licence) to generate the synthetic PDF invoices. The app does not need it.
 - **Deck only:** the slides use the Source Serif 4 and IBM Plex Sans fonts (SIL Open Font License) from Google Fonts.
 - **CI:** the GitHub Actions workflow uses `actions/checkout` and `actions/setup-python` (both MIT). They run only on GitHub and are not part of the app.

@@ -3,7 +3,7 @@
 Version 0.4, 18 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (18 Oct 2026):** 228 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
+**At a glance (18 Oct 2026):** 239 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -64,7 +64,7 @@ All money uses Python `Decimal`. Rupee amounts are rounded to paise (half-up); T
 `rulepack/india_lrs_tcs.json` holds every rate and threshold with:
 - `value`
 - `effective_from`
-- `status` (`secondary-source` or `unverified`)
+- `status` (`verified`, `secondary-source` or `unverified`); `verified` only with a primary government source (enforced by `tests/test_rules.py`)
 - `source`
 - `check_against`: the primary source to confirm against
 - the pack `version`
@@ -133,7 +133,7 @@ The missing-documents checklist is taken from the corridor. For example, the vis
 ### 3.6 Corridors as config
 `corridors/in_us.json` and `corridors/in_gb.json` hold destination facts only: currency, purpose code and the student-visa document.
 
-Switching from India→USA to India→UK is a file swap. The India rule pack is the same for both. New facts in the corridor files are marked `unverified`.
+Corridors: India to the USA, UK, Canada and Australia. Adding a destination is a file: The India rule pack is the same for both. New facts in the corridor files are marked `unverified`.
 
 ## 4. Security design
 
@@ -269,7 +269,7 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
 
 **Results on 18 Oct 2026:**
-- 228 tests pass.
+- 239 tests pass.
 - 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
 - The attack lab stops 16 of 16 attacks.
 - The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.
@@ -292,6 +292,7 @@ GitHub Actions runs the tests on every push.
   - Reads text, JSON and PDF invoices. JSON of any shape is flattened to labelled lines; a signed JSON invoice carries its own attestation. PDFs are read by a standard-library text extractor (`agent/pdf.py`, 2 MB cap before and 20 MB after decompression); scanned PDFs are refused because there is no OCR. A PDF carries no university signature, so it is read but stays unverified.
   - Chooses its **next action** from the session's state (`Agent.next_action`): consent, invoice, one targeted question, hand-over, signature, pay or done, with the reason. After each answer it logs `resumed` with the completed checks it did not repeat; the signature chain runs once per invoice.
   - Asks a question for every missing fact instead of guessing.
+  - **Student prepares, parent signs:** a signed-in student can prepare a payment and ask a parent to sign (`Agent.request_parent`). A signed-in parent device opens it (`Agent.take_over`); it moves to a new session id, so the student's old id stops working and a student device can never act as the parent.
   - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
   - Changing the route or the plan voids the approval.
   - The receipt records masked inputs, rules used and their versions, the approval, the plan hash, the transaction and its audit-entry hash.
@@ -322,10 +323,10 @@ Two finance questions remain open and need a source before any change:
 - The ranking includes TCS, which the family can later claim against their income tax.
 
 ## 7. Limits and open items
-- Several tax rules are still secondary-source or unverified (see the rule pack and the self-assessment).
-- The model adapter is an offline deterministic stand-in; a hosted model is not wired in yet.
+- Six tax rules were verified on 18 Oct against the RBI Master Direction and the Income-tax Act 2025 (s.394, s.397); two still need a bank's confirmation (see the rule pack and risk R1).
+- The model adapter runs offline by default. A hosted Claude model is optional (`TUITIONPILOT_MODEL=claude` with the `anthropic` SDK installed): masked input only, values grounded in the text, wording grounded in the engine, offline fallback on any failure.
 - Scanned (image-only) PDF invoices can't be read: there is no OCR.
 - One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.
 - The scanner is pattern-based. It is a first line of defence; the policy engine must also refuse on its own.
 - Our Ed25519 code is plain Python: not constant-time and not audited. The demo keys are synthetic.
-- Open web-server items (R20–R22, R25 in the self-assessment): no `Origin`/`Host` check, no request timeout, and the session id is a bearer token in `localStorage`.
+- Open web-server items (R21, R22, R25 in the self-assessment): no request timeout, and the session id is a bearer token in `localStorage`. Cross-site requests are refused (R20, fixed 18 Oct).

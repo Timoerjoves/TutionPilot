@@ -4,7 +4,7 @@ Official deliverable: "simulated-account / sandbox operation logs" plus results.
 
 | File | What | Made by |
 |---|---|---|
-| `scenario_results.md` / `.json` | The 25 scripted scenarios with expected vs actual result | `python -m scenarios.runner` |
+| `scenario_results.md` / `.json` | The 27 scripted scenarios with expected vs actual result | `python -m scenarios.runner` |
 | `demo/demo_run.md` | Summary of a scripted run: payments, attacks, breaker | `python -m app.demo_run` |
 | `demo/sandbox_ledger.log` | Every sandbox bank transfer (JSON lines) | sandbox bank |
 | `demo/audit_log.jsonl` | Hash-chained audit log of every step and policy decision | audit log |
