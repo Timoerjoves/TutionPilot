@@ -1,7 +1,9 @@
 # TuitionPilot: technical documentation
 
-Draft v0.3, 17 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
+Version 0.4, 18 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
+
+**At a glance (18 Oct 2026):** 227 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -13,8 +15,8 @@ An Indian family must pay a university abroad. Today they work out on their own:
 - which bank or provider is really cheapest once the hidden exchange-rate markup is counted;
 - which papers the bank wants.
 
-TuitionPilot is an agent that reads the invoice, checks the payee, does those calculations, explains them line by line,
-drafts the A2-style form, and pays only inside a simulated bank after a parent approves the exact plan with a PIN.
+TuitionPilot is an agent that reads the invoice, checks the university's digital signature, does those calculations, explains them line by line,
+drafts the A2-style form, and pays only inside a simulated bank after the parent enters a PIN and the parent's own device signs the exact plan.
 
 **Design rule: code computes, the model explains.** Every number with a right answer (tax, cost, limits) comes from
 plain, tested Python. The language model only reads documents and puts the engine's results into words, and
@@ -22,29 +24,18 @@ even those words are checked (see 4.3).
 
 ## 2. Architecture
 
-```
- Student / parent
-       |  invoice + answers
-       v
- [1 Intake] -> [2 Mask] -> [3 Extract (model)] -> [4 Verify university signature]
-                                                         |
-                       [5 Rules: LRS, TCS, landed cost] <-+
-                                     |
-                       [6 Compare routes + explain] -> [Form A2 draft + checklist]
-                                     |
-                       [7 Plan (multi-step, asks when data is missing)]
-                                     |
-                       [8 Policy gate: tier, caps, emergency stop]
-                                     |
-                       [9 Approve: parent device signs plan hash]
-                                     |
-                       [10 Execute in sandbox bank] -> [11 Receipt + audit log] -> [12 Timeline]
-```
+![TuitionPilot architecture](architecture.png)
+
+Source: [architecture.svg](architecture.svg). How to read it:
+- **Orange (outside the server):** the university, the parent's and student's browsers, and the trust root. Every private key lives here, never on the server.
+- **Blue (agent pipeline):** the steps from invoice to plan. The dashed box is the only step that uses an AI model, and it sees masked text only.
+- **White (guards and shared data):** the scanner, the grounding check, the rule pack and the message contract.
+- **Navy (money path, sandbox only):** policy gate → sandbox bank → audit log and receipt.
 
 | Stage | Module | Owner | Status |
 |---|---|---|---|
+| 1 Intake, consent | `app/static/` UI, `agent/agent.py`, `agent/pdf.py` (PDF text, standard library) | Nishanth | Built |
 | 2 Mask | `security/masking.py` | Chandan | Built |
-| 1 Intake, consent | `app/static/` UI, `agent/agent.py` | Nishanth | Built |
 | 3 Extract | `agent/model.py` (offline deterministic adapter; a hosted model can plug in) | Nishanth | Built |
 | 4 Payee check | `security/pki.py` (trust root → certificate → signed invoice), `security/ed25519.py` | Both | Built |
 | 5 Rules | `rules/engine.py`, `rulepack/india_lrs_tcs.json` | Chandan | Built |
@@ -148,6 +139,32 @@ Switching from India→USA to India→UK is a file swap. The India rule pack is 
 
 The full self-assessment and known-risk list are in [SECURITY_SELF_ASSESSMENT.md](SECURITY_SELF_ASSESSMENT.md).
 
+### 4.0 Security at a glance
+
+Five ideas carry the design:
+1. **The AI model cannot move money.** It has no payment tool. Only the agent's `pay()` reaches the sandbox, and only through the policy gate.
+2. **Signatures instead of lists.** A university proves its bank account with a root-signed certificate and signs each invoice.
+3. **The parent signs, not the agent.** Payment approval is a signature from the parent's own device over the exact plan.
+4. **Code computes, the model explains.** Numbers come from tested code, and any number the model writes is checked against it.
+5. **Private keys and files stay on the family's devices.** The server stores public keys and ciphertext only.
+
+| What we protect | How | Standard or primitive | Code |
+|---|---|---|---|
+| Invoice is genuine and the bank account is the university's | Trust root → certificate (names the bank account) → invoice signature; revocation list | Ed25519 (RFC 8032) | `security/pki.py`, `security/ed25519.py` |
+| Payment approval | PIN + parent device signature over the plan hash; any edit voids it | Ed25519 via WebCrypto (non-exportable key); SHA-256 plan hash | `contract.plan_hash()`, `app/policy.py`, `security/pki.py: verify_approval` |
+| Sign-in | No passwords: the device signs a one-time, 2-minute server challenge | Ed25519, prefix `tuitionpilot-sign-in:` | `app/family.py: sign_in` |
+| Adding a new device | PIN + signature from an enrolled parent device over the one-use, 10-minute request | Ed25519, prefix `tuitionpilot-enrol-device:` | `app/family.py: register` |
+| Family documents | Encrypted in the browser; the file key is locked separately for each device; the file name is bound in | AES-256-GCM; X25519 + HKDF-SHA256 | `app/static/app.js`, `app/family.py` |
+| The PIN | Stored only as a salted hash | PBKDF2-HMAC-SHA256, 100,000 rounds, random salt | `app/policy.py` |
+| Audit trail | Each entry stores the hash of the one before; a verify command names the first edited entry | SHA-256 hash chain | `app/audit.py` |
+| Personal data sent to the model | PAN, Aadhaar, passport, account, email, phone and labelled names become tokens; a leak stops the call | Pattern + label masking, "what the model saw" log | `security/masking.py` |
+| Numbers shown to families | Model numbers must match the engine, or the engine's text is shown | Grounding check | `security/grounding.py` |
+| Text from invoices, e-mails and chat | Flags injection, auto-approve, fake admin, payee change, data extraction, pressure | Pattern scanner after Unicode clean-up | `security/guard.py` |
+| Runaway or abused agent | Tiers T0–T4, per-payment cap, emergency stop, freeze after 3 denied money actions | Policy gate on every tool call | `app/policy.py` |
+| The web app | Listens on 127.0.0.1 only; strict Content-Security-Policy; `no-store`; body-size limits; every value HTML-escaped | — | `app/server.py`, `app/static/` |
+
+Domain separation: sign-in, enrolment and approval signatures each cover a different prefixed message, so one can never be replayed as another.
+
 ### 4.1 Permission tiers
 | Tier | Allowed | Approval |
 |---|---|---|
@@ -205,7 +222,7 @@ There is no list of "good" payees. TuitionPilot trusts **one root key** (`data/t
 The agent then pays the signed data, never the printed text. The bank re-checks the certificate before moving money.
 
 **Parent approvals.**
-- **Set-up:** the parent's browser creates an Ed25519 key with WebCrypto. The key cannot be exported and stays in the browser's IndexedDB. Only the public key is registered, with the PIN.
+- **Set-up:** the parent's browser creates an Ed25519 key with WebCrypto. The key cannot be exported and stays in the browser's IndexedDB. Only the public key is registered. The first parent device enrols with the PIN alone; every later device (parent or student) needs the PIN **and** an enrolled parent device's signature over its exact enrolment request (see 4.7).
 - **Signing:** to approve, the browser recomputes the plan hash from the plan it shows, then signs the approval message (plan id, plan hash, tier, decision, method, time).
 - **Checking:** the policy engine verifies that signature against the registered parent keys before any T3 payment.
 - **Effect:** the agent never holds the parent's key, so it cannot forge an approval or change the plan after signing.
@@ -216,6 +233,14 @@ The agent then pays the signed data, never the printed text. The bank re-checks 
 - many tamper cases.
 
 Keys and signatures are base64. A signature always covers `contract.signed_bytes(msg)`: the canonical JSON of the message without its own signature field.
+
+### 4.7 Device sign-in, enrolment and the vault
+
+Each parent or student browser makes two key pairs and keeps the private halves (non-extractable) in IndexedDB: **Ed25519** to sign, **X25519** to unlock vault files. The server stores public keys only (`app/family.py`).
+
+- **Sign-in:** the server issues a random challenge, valid 2 minutes and usable once. The browser signs `tuitionpilot-sign-in:` + challenge; the server verifies it against the enrolled key and opens a session whose role is fixed (`agent.set_role` refuses student → parent).
+- **Enrolment (risk R19, fixed 18 Oct):** only the first parent device enrols with the PIN alone. A later device shows a short code; a signed-in parent device signs `tuitionpilot-enrol-device:` + the canonical request (role, both public keys, label, a one-use 10-minute nonce) in ⚙ Settings; the new device finishes with the PIN. While the circuit breaker is frozen, every PIN check except the reset is refused.
+- **Vault:** each file gets a fresh AES-256-GCM key (file name bound as associated data). That key is wrapped once per allowed device with X25519 + HKDF-SHA256 under a one-time key. The server stores only ciphertext and wrapped keys, and hands each device only its own wrapped key. Students can share only with parents.
 
 ## 5. Testing and evidence
 
@@ -239,7 +264,17 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_signing.py` | Ed25519 (RFC 8032 vectors, browser WebCrypto signature), trust chain, revocation, signed approvals |
 | `test_app.py` | Invoice reader, signed invoices, sandbox bank, policy engine, audit log, agent flow |
 | `test_server.py` | Web server: pages, security headers, sign-in and a full payment over HTTP |
-| `test_family.py` | Device enrolment, challenge sign-in (replay, expiry, wrong key), locked roles, vault sharing rules |
+| `test_family.py` | Device enrolment (bootstrap, parent-signed requests, replay, frozen breaker), challenge sign-in (replay, expiry, wrong key), locked roles, vault sharing rules |
+| `test_pdf.py` | PDF text reader: sample PDFs, positions, escapes, embedded fonts, size and zip-bomb limits, encrypted and scanned PDFs refused |
+| `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
+
+**Results on 18 Oct 2026:**
+- 227 tests pass.
+- 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
+- The attack lab stops 16 of 16 attacks.
+- The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.
+
+GitHub Actions runs the tests on every push.
 
 ## 6. App, agent and sandbox
 
@@ -248,17 +283,23 @@ python -m app.server                              # the app at http://127.0.0.1:
   - On its own, it refuses unknown or expired quotes, unverified payees and short balances.
 - **Policy engine** (`app/policy.py`): every tool call is checked.
   - T0–T1 are allowed and T4 is always denied.
-  - T3 needs, in order: not frozen, emergency stop off, a verified payee, an amount within the per-payment cap, a valid `approval` whose `plan_hash` matches the current plan, method `pin`, role `parent`, and a tier equal to the plan's highest tier.
+  - T3 needs, in order: not frozen, emergency stop off, a verified payee, an amount within the per-payment cap, a valid `approval` whose `plan_hash` matches the current plan, a valid signature from a registered parent device, method `pin`, role `parent`, and a tier equal to the plan's highest tier.
   - Three denied money actions in a row freeze the agent until a parent resets it with the PIN.
   - Settings change only with the PIN; the PIN is stored as PBKDF2-SHA256 with a random salt.
 - **Audit log** (`app/audit.py`): each entry stores the SHA-256 of the one before it.
   - `python -m app.audit verify FILE` names the first entry that was edited, removed or moved.
 - **Agent** (`agent/agent.py`):
+  - Reads text, JSON and PDF invoices. JSON of any shape is flattened to labelled lines; a signed JSON invoice carries its own attestation. PDFs are read by a standard-library text extractor (`agent/pdf.py`, 2 MB cap before and 20 MB after decompression); scanned PDFs are refused because there is no OCR. A PDF carries no university signature, so it is read but stays unverified.
+  - Chooses its **next action** from the session's state (`Agent.next_action`): consent, invoice, one targeted question, hand-over, signature, pay or done, with the reason. After each answer it logs `resumed` with the completed checks it did not repeat; the signature chain runs once per invoice.
   - Asks a question for every missing fact instead of guessing.
   - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
   - Changing the route or the plan voids the approval.
   - The receipt records masked inputs, rules used and their versions, the approval, the plan hash, the transaction and its audit-entry hash.
-- **UI** (`app/static/`): plain HTML, CSS and JavaScript with three screens, an explain panel, consent, delete-my-data and a settings drawer. A landing page (`/`) and a passwordless sign-in page (`/signin`) come first: each parent or student device enrols once with the parent's PIN and then signs a one-time server challenge to sign in (`app/family.py`). A family vault (`/app` → Family vault) encrypts documents in the browser so the server holds ciphertext only.
+- **Invoices:** pasted text, synthetic samples, JSON test invoices (`data/invoices/`) or PDF (`agent/pdf.py`, standard library, up to 2 MB, no OCR). An unsigned invoice can be read and explained but never paid.
+- **UI** (`app/static/`): plain HTML, CSS and JavaScript.
+  - **Landing page** (`/`), then **passwordless sign-in** (`/signin`, see 4.7).
+  - **A guided six-step story:** Welcome (two consents) → Invoice (animated signature-chain check) → Questions (one at a time) → Best route (cost-on-top chart, what-if sliders, LRS gauge) → Review & sign (PIN pad; the device signs the plan) → Receipt.
+  - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent), the **Family vault** (4.8), Settings (cap, emergency stop, device approval) and delete-my-data.
   - Every value is HTML-escaped.
   - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
 
@@ -283,5 +324,8 @@ Two finance questions remain open and need a source before any change:
 ## 7. Limits and open items
 - Several tax rules are still secondary-source or unverified (see the rule pack and the self-assessment).
 - The model adapter is an offline deterministic stand-in; a hosted model is not wired in yet.
+- Scanned (image-only) PDF invoices can't be read: there is no OCR.
 - One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.
 - The scanner is pattern-based. It is a first line of defence; the policy engine must also refuse on its own.
+- Our Ed25519 code is plain Python: not constant-time and not audited. The demo keys are synthetic.
+- Open web-server items (R20–R22, R25 in the self-assessment): no `Origin`/`Host` check, no request timeout, and the session id is a bearer token in `localStorage`.

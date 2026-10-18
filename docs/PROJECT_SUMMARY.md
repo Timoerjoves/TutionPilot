@@ -1,7 +1,7 @@
 # TuitionPilot: project summary
 
 **2026 Shenzhen FinTechathon · International Track · Topic C (Cross-border & Student Finance)**
-Team: Chandan and Nishanth · Status on 17 Oct 2026: first complete draft, all checks green.
+Team: Chandan and Nishanth · Status on 18 Oct 2026: complete, all checks green.
 
 > Synthetic data only. No real money. Not tax advice. Not RBI-approved.
 
@@ -57,11 +57,18 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 | Shared message contract v1.1 | `contract/`, `docs/CONTRACT.md` |
 | 27 scripted scenarios + evidence logs | `scenarios/`, `data/evidence/` |
 
-**Numbers (17 Oct 2026):**
-- 203 tests pass.
+**Added on 18 Oct 2026:**
+- Passwordless sign-in for parent and student devices; roles are fixed at sign-in. A new device needs the PIN **and** an enrolled parent device's signature (risk R19, fixed).
+- An encrypted family document vault: files are locked in the browser, and the server holds ciphertext only.
+- PDF and JSON invoice intake, and nine drag-and-drop test invoices (`data/invoices/upload/`).
+- A visible **Next action**: the agent picks its next step from the session's state, asks one targeted question when a field is missing, and resumes without repeating completed checks.
+- A landing page and a calmer, minimal interface.
+
+**Numbers (18 Oct 2026):**
+- 227 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
-- The demo audit chain has 108 entries and verifies.
+- The demo audit chain has 153 entries and verifies.
 - A finance audit of 400 random cases matched an independent formula.
 
 ## Why it should score well

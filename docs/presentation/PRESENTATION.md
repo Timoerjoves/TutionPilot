@@ -1,9 +1,9 @@
-# Presentation (8 slides, about 9 minutes)
+# Presentation (9 slides, about 10 minutes)
 
 - **Live deck (private, Chandan's account):** https://claude.ai/artifact/E9FusU8285LxbRy6PXmtm6
-- **Export:** open the deck → Share › Export to get PowerPoint (.pptx) or PDF, then add the file to this folder.
-- **Slide sources:** `slides/` holds each slide as it was on 17 Oct (`slides/deck.json` is the order).
-- **To review:** Nishanth reviews slides 2 and 6. Rerun the numbers on slide 7 just before submitting.
+- **PDF for submission:** [TuitionPilot_deck.pdf](TuitionPilot_deck.pdf) (exported 18 Oct).
+- **Slide sources:** `slides/` holds each slide as it was on 18 Oct (`slides/deck.json` is the order).
+- Rerun the numbers on slide 8 just before submitting.
 
 | # | Slide | Time | Key message |
 |---|---|---|---|
@@ -12,9 +12,10 @@
 | 3 | **LRS and TCS: the rules the engine uses** | 1:15 | A rule table with value, date, source and status. TCS = rate × (this year's total − the larger of earlier payments or Rs 10 lakh). Four rules are still unverified and are flagged. |
 | 4 | **Worked examples, step by step** | 1:15 | A2: Rs 15 lakh self-funded → TCS Rs 10,000 (loan: Rs 0). A8: USD 20,000 at 90.20 → Rs 18,04,000 + TCS 16,080 + fee 3,000 = Rs 18,23,080. Also A1, A4, A5, A6. |
 | 5 | **Route comparison: why Provider B wins** | 1:15 | A has the lower fee, but B is Rs 4,620 cheaper (rate +6,000, fee −1,500, TCS +120). Hidden markup at A: Rs 10,000 (0.56%). |
-| 6 | **Security: signatures instead of lists** | 1:15 | University: trust root → certificate (bank account) → invoice signature → bank match → printed text. Parent: device key → register with PIN → recompute hash → sign → policy verifies. Tiers T0–T4. |
-| 7 | **Evidence: 27 scenarios, one command** | 1:00 | 27/27 scenarios, 203 tests, 16/16 attacks stopped, 108 audit entries verify. The finance audit (400 cases) found 3 agent bugs, all fixed. |
-| 8 | **Limits, stated plainly** | 1:00 | Unverified tax rules; GST on conversion not modelled; offline AI stand-in; un-hardened Ed25519; synthetic keys; names not masked; fixed demo PIN; audit log is tamper-evident, not tamper-proof. |
+| 6 | **Security: signatures instead of lists** | 1:15 | University: trust root → certificate (bank account) → invoice signature → bank match → printed text. Parent: device key → enrol with the PIN and a parent device's approval → recompute hash → sign → policy verifies. Tiers T0–T4. |
+| 7 | **Built for families: sign-in, vault, next action** | 1:00 | Passwordless device sign-in with fixed roles; encrypted family vault (server holds ciphertext only); one targeted question and resume; PDF and JSON intake. |
+| 8 | **Evidence: 27 scenarios, one command** | 1:00 | 27/27 scenarios, 227 tests, 16/16 attacks stopped, 153 audit entries verify. The finance audit (400 cases) found 3 agent bugs, all fixed. |
+| 9 | **Limits, stated plainly** | 1:00 | Unverified tax rules; GST on conversion not modelled; offline AI stand-in; un-hardened Ed25519; synthetic keys; addresses and unlabelled names not masked; scanned PDFs need OCR; fixed demo PIN; audit log is tamper-evident, not tamper-proof. |
 
 Full speaker notes are inside each slide file (`<aside>` at the end of each `slides/*.html`) and in the live deck.
 

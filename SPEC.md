@@ -90,7 +90,7 @@ Acceptance:
 ## 5. Testing
 - New tests go in `tests/test_security.py` (M1) and `tests/test_explain.py` (M2, M3); the property check goes in `tests/test_finance_audit.py`.
 - Each acceptance box above is one test.
-- Regression: the full suite (156 tests now) stays green, and the scenario runner and demo run succeed.
+- Regression: the full suite (227 tests now) stays green, and the scenario runner and demo run succeed.
 
 ## 6. Boundaries
 - **Always:** synthetic data; a rule trace or source on every number; flag unverified rules; run the tests after each module.

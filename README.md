@@ -1,11 +1,15 @@
 # TuitionPilot
 
 An AI agent that helps an Indian family pay university tuition abroad. It:
-- reads the invoice and verifies the university's **digital signature** (no hand-kept list of payees);
+- reads the invoice (PDF, JSON or text) and verifies the university's **digital signature** (no hand-kept list of payees);
+- asks one targeted question when something is missing, then resumes without repeating completed checks;
 - works out LRS headroom, TCS and landed cost;
 - compares routes and explains every rupee;
 - drafts an A2-style form;
-- executes a payment **inside a simulated bank only**, after the parent's device **signs** the exact plan.
+- executes a payment **inside a simulated bank only**, after the parent's device **signs** the exact plan;
+- keeps family documents in an **encrypted vault** the server cannot read.
+
+Parents and students sign in **without passwords**: each device signs a one-time challenge with a key that never leaves the browser.
 
 2026 Shenzhen FinTechathon, International Track, Topic C (Cross-border & Student Finance). Team: Chandan, Nishanth.
 
@@ -23,18 +27,20 @@ Python 3.10 or newer. Nothing to install: standard library only.
 
     python -m app.server
 
-Then open **http://127.0.0.1:8000**. The server listens on this computer only.
+Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**. The server listens on this computer only.
 - **Demo parent PIN:** `2468`. It is set in `app/demo_config.json` and protects nothing real.
+- The server keeps sessions, devices and the vault in memory, so a restart starts clean.
 - **Different port:** add `--port 8001` (or set `PORT`).
 
 ### A two-minute tour
-1. **Welcome:** switch on both consents, then *Agree and start*.
-2. **Invoice:** pick **Genuine invoice · Northbridge**. Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details.
-3. **Questions:** answer one at a time. Use any synthetic PAN, for example `ABCDE1234F`.
-4. **Best route:** see what each route costs on top of the real exchange value, why the cheapest wins, and the LRS limit gauge. Move the **What if…** slider and toggles to see tax change live.
-5. **Review & sign:** the first time, enter the PIN to create this browser's signing key. Then enter the PIN again to sign the exact plan, and press *Send payment (sandbox)*.
-6. **Receipt:** shows the transaction, the university's certificate, the parent's key and signature, and the audit entry.
-7. **Try the attacks** with the other samples:
+1. **Sign in** (`/signin`): choose *Parent*, enter the PIN and click *Set up & sign in*. This browser makes its own keys; only the public halves go to the server. Only this first parent device enrols with the PIN alone: any later device (a student's laptop, a second parent phone) shows a code that a signed-in parent approves in ⚙ Settings, then finishes with the PIN.
+2. **Welcome:** switch on both consents, then *Agree and start*.
+3. **Invoice:** pick **Genuine invoice · Northbridge**, or drag a file from `data/invoices/upload/` (four genuine signed invoices, five attacks). Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details. The **Next action** card in the live panel shows what the agent will do next and why.
+4. **Questions:** answer one at a time. Use any synthetic PAN, for example `ABCDE1234F`.
+5. **Best route:** see what each route costs on top of the real exchange value, why the cheapest wins, and the LRS limit gauge. Move the **What if…** slider and toggles to see tax change live.
+6. **Review & sign:** enter the PIN; this browser signs the exact plan. Press *Send payment (sandbox)*.
+7. **Receipt:** shows the transaction, the university's certificate, the parent's key and signature, and the audit entry.
+8. **Try the attacks** with the other samples:
    - *Changed bank details*: the signature breaks.
    - *Look-alike university*: self-made certificate.
    - *Revoked key*.
@@ -45,14 +51,15 @@ Then open **http://127.0.0.1:8000**. The server listens on this computer only.
    - On the sign screen, use *Tamper with the plan*.
    - In the explain panel, use *Tamper (demo)*.
    - In ⚙ Settings, turn on the *Emergency stop*.
-8. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each.
-9. **Agent, live** panel: every step and policy decision as it happens, the rule trace with sources, what the AI saw (masked) and the audit chain.
-10. Switch **Parent / Student** at the top right: a student can review but not sign.
+9. **Family vault** (left): add a document; it is encrypted in this browser before upload, for the devices you choose.
+10. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each.
+11. **Agent, live** panel: every step and policy decision as it happens, the rule trace with sources, what the AI saw (masked) and the audit chain.
+12. Sign in as a **Student** on an approved device: a student can review everything but never sign or pay.
 
 ## Tests and evidence
-    python -m unittest discover -s tests -t . -v      # 156 tests
+    python -m unittest discover -s tests -t . -v      # 227 tests
     python -m scenarios.runner                         # 27 scenarios -> data/evidence/scenario_results.md
-    python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log, model log)
+    python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log of 153 entries, model log)
     python -m app.audit verify data/evidence/demo/audit_log.jsonl
 
 GitHub Actions runs all of these on every push (`.github/workflows/tests.yml`).
@@ -89,16 +96,18 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 | `rules/` | Rules engine (LRS, TCS, year-to-date, landed cost, routes) and line-by-line explanations |
 | `security/` | Signatures (Ed25519, trust chain), masking + what-the-model-saw log, untrusted-text scanner, grounding check |
 | `forms/`, `corridors/` | A2-style draft and checklist; India→USA and India→UK destination config |
-| `agent/` | The agent (plan, questions, escalation, receipt) and the model adapter |
-| `app/` | Sandbox bank, policy engine, audit log, attack lab, web server and UI (`app/static/`) |
+| `agent/` | The agent (plan, next action, questions, escalation, receipt), the model adapter and the PDF text reader (`agent/pdf.py`) |
+| `app/` | Sandbox bank, policy engine, audit log, attack lab, device sign-in and encrypted vault (`app/family.py`), web server and UI (`app/static/`: landing, sign-in, app) |
 | `contract/` | Shared message shapes, validation, plan hash |
-| `scenarios/` | The 25-scenario runner and synthetic fixtures |
-| `data/` | Sample messages, signed sample invoices, trust root and certificates (`data/trust/`), evidence |
-| `tests/` | Unit, contract, attack, app, server and scenario tests |
+| `scenarios/` | The 27-scenario runner and synthetic fixtures |
+| `data/` | Sample messages, signed sample invoices, drag-and-drop test invoices (`data/invoices/upload/`), trust root and certificates (`data/trust/`), evidence |
+| `tests/` | 227 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
 | `docs/` | Contract, technical docs, security self-assessment, demo script |
 
 ## Licences
-- **Application code:** Python standard library only, with no third-party packages. Python is under the PSF License.
+- **Application code:** Python standard library only, with no third-party packages. Python is under the PSF License. The browser code uses only built-in Web Crypto (Ed25519, X25519, AES-GCM, HKDF); no JavaScript libraries.
+- **Sample PDFs only:** `data/invoices/make_invoices.py` uses ReportLab (BSD licence) to generate the synthetic PDF invoices. The app does not need it.
+- **Deck only:** the slides use the Source Serif 4 and IBM Plex Sans fonts (SIL Open Font License) from Google Fonts.
 - **CI:** the GitHub Actions workflow uses `actions/checkout` and `actions/setup-python` (both MIT). They run only on GitHub and are not part of the app.
 - **Ed25519** in `security/ed25519.py` is our own implementation of the algorithm published in RFC 8032 (IETF Trust; code components of RFCs are under the Simplified BSD License).
 - **No code** was copied from other teams.
