@@ -1,6 +1,6 @@
 # Security self-assessment
 
-Version 0.6, 20 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
+Version 0.6, 19 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
 We list what is built, how it is tested, and what is still weak. Nothing here handles real money or real people's data.
 
 ## Summary
@@ -8,9 +8,9 @@ We list what is built, how it is tested, and what is still weak. Nothing here ha
 | | |
 |---|---|
 | **Posture** | Money moves only inside a simulated bank, only through a policy gate, and only with a PIN **and** a signature from the parent's own device over the exact plan. The AI model has no payment tool. |
-| **Evidence (20 Oct)** | 271 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (180 entries) verifies |
+| **Evidence (19 Oct)** | 271 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (180 entries) verifies |
 | **Biggest open risks** | R1 two tax rules still need a bank's confirmation · R8 single trust root · R15 un-hardened Ed25519 code · R27 the sanctions list is synthetic |
-| **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. R25 (Medium): since 20 Oct a session is bound to an HttpOnly cookie and expires after 30 idle minutes. |
+| **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. R25 (Medium): since 19 Oct a session is bound to an HttpOnly cookie and expires after 30 idle minutes. |
 
 Architecture: see [TECHNICAL.md](TECHNICAL.md) section 2 and [architecture.png](architecture.png).
 
@@ -187,7 +187,7 @@ Severity is for a real deployment unless marked "demo".
 | R22 | The sandbox detects duplicates by approval id only. A second, separately signed approval of the same plan could pay twice if `SandboxBank.execute` is called directly | Low | The agent refuses a second payment of the same plan in a session (`agent.pay`) | Record paid plan hashes in the bank and refuse repeats |
 | R23 | `model.explain()` is not routed through `prepare_for_model`. It only ever receives text the engine wrote (no personal data), but it is not logged as "what the model saw" | Low | By design for now | Route it through `prepare_for_model` before connecting a hosted model |
 | R24 | A vault file is locked only to the devices enrolled when it was uploaded. A device enrolled later cannot open older files, and a family that loses every device holding a file's key loses the file | Medium | By design: the server can never unlock a file | Re-share from a device that can open it; add a parent recovery key kept offline |
-| R25 | ~~A session id in `localStorage` is the bearer token after sign-in.~~ **Fixed 20 Oct:** sign-in sets an HttpOnly, SameSite=Strict cookie holding a random 256-bit token bound to that one session; every `/api/session/...` request must carry it, so a copied session id alone is refused. A session idle for 30 minutes (`session_idle_minutes`) is deleted. Remains: no `Secure` flag, because the demo runs over plain HTTP on this computer | Low (was Medium) | `app/server.py`; `test_server.py` | Add `Secure` when served over HTTPS; rotate the token on privilege change |
+| R25 | ~~A session id in `localStorage` is the bearer token after sign-in.~~ **Fixed 19 Oct:** sign-in sets an HttpOnly, SameSite=Strict cookie holding a random 256-bit token bound to that one session; every `/api/session/...` request must carry it, so a copied session id alone is refused. A session idle for 30 minutes (`session_idle_minutes`) is deleted. Remains: no `Secure` flag, because the demo runs over plain HTTP on this computer | Low (was Medium) | `app/server.py`; `test_server.py` | Add `Secure` when served over HTTPS; rotate the token on privilege change |
 | R26 | For the demo one browser can hold both a parent and a student key, so whoever uses that browser can sign in as either | Low (demo) | Real families enrol separate devices | Enrol each role on its own device; allow one role per browser profile |
 | R27 | The sanctions list is synthetic and matching is name-based only (no dates of birth, no transliteration): a real listed person under a different spelling or script could pass, and a common name could be flagged for review | Medium | Exact normalised names stop the payment (T4); spelling variants (similarity 0.80 or more) go to a bank officer; the rule is marked unverified | Screen against the lists the bank must use, with dates of birth and the bank's own screening service |
 | R28 | The sandbox bank's statement key is derived from a public label, so anyone could sign a fake payment record | Low (demo) | Clearly marked synthetic; the public key is published at `/api/trust` | A real bank signs with a key it keeps in a hardware module |

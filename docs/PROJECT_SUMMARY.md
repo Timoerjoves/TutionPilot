@@ -73,14 +73,14 @@ Next to the steps, an **Agent, live** panel (which can be hidden) shows every st
 - RBI LRS compliance checks (purpose, yearly limit, PAN, Form A2, TCS rule), each from a verified rule with its source, shown before signing and on the receipt.
 - A printable payment receipt (A4, Print or save as PDF) and an inline paste box for invoice text.
 
-**Added on 20 Oct 2026:**
+**Added on 19 Oct 2026 (afternoon):**
 - **An adaptive payment plan:** when to send (due date and settlement time), whether waiting for the new financial year lowers TCS, loan versus own money, how to split a payment that is too large, and what next semester's fee will cost.
 - **Student money:** a living-cost budget in four currencies (monthly or quarterly transfers) and an on-time payment record signed by the sandbox bank.
 - **KYC/AML:** sanctions screening of the sender, the student and the university (synthetic list), and a source-of-funds declaration on the A2-style draft.
 - **Sessions bound to an HttpOnly cookie** with a 30-minute idle timeout (risk R25, fixed).
 - **Hosted Claude answers free-form questions** when switched on; an answer is shown only if every number in it matches the engine.
 
-**Numbers (20 Oct 2026):**
+**Numbers (19 Oct 2026):**
 - 271 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.

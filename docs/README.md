@@ -4,7 +4,7 @@
 |---|---|
 | [../SUBMISSION.md](../SUBMISSION.md) | **Start here:** the six official deliverables (Appendix 2) and where each one is |
 | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | One-page idea summary: problem, idea, what is built, why it scores, limits |
-| [team/TEAM_PLAN.md](team/TEAM_PLAN.md) | Team plan (Plan v2) with owners, dues and status (updated 20 Oct); scenarios; official deliverables |
+| [team/TEAM_PLAN.md](team/TEAM_PLAN.md) | Team plan (Plan v2) with owners, dues and status (updated 19 Oct); scenarios; official deliverables |
 | [../TODO.md](../TODO.md) | What is left before the first and final submission |
 | [presentation/PRESENTATION.md](presentation/PRESENTATION.md) | The judges' 11-slide deck (PPTX and PDF), outline, timings; the older 9-slide web deck and its sources |
 | [TECHNICAL.md](TECHNICAL.md) | Technical documentation: architecture, algorithms, security design, finance audit (official deliverable) |

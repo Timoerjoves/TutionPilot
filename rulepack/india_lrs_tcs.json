@@ -1,6 +1,6 @@
 {
   "pack_id": "india-lrs-tcs",
-  "version": "2026.10.20-r1",
+  "version": "2026.10.19-r2",
   "jurisdiction": "IN",
   "description": "India outbound education remittances under the Liberalised Remittance Scheme (LRS): annual cap and tax collected at source (TCS). Draft: secondary sources only. Check every rule against RBI and Income Tax Department sources before relying on it.",
   "rules": {
@@ -142,7 +142,7 @@
       "status": "unverified",
       "source": "https://rbi.org.in/scripts/bs_viewmasdirections.aspx?id=10292",
       "check_against": "RBI Master Direction - Know Your Customer (KYC) Direction, 2016, as amended: para 10(9) (customer acceptance) and para 51 (UNSC lists under Section 51A of the UAPA, 1967)",
-      "note": "Seen 20 Oct 2026 on the RBI page (consolidated as on 12 Jul 2018): para 10(9) asks for a system to ensure 'the identity of the customer does not match with any person or entity' on the circulated sanctions lists; para 51 forbids accounts for those on the UNSC lists. Not yet checked against the current amended direction. TuitionPilot screens the remitter, the student and the payee against a SYNTHETIC list (data/screening/watchlist_synthetic.json); a real deployment must use the lists the bank is required to use."
+      "note": "Seen 19 Oct 2026 on the RBI page (consolidated as on 12 Jul 2018): para 10(9) asks for a system to ensure 'the identity of the customer does not match with any person or entity' on the circulated sanctions lists; para 51 forbids accounts for those on the UNSC lists. Not yet checked against the current amended direction. TuitionPilot screens the remitter, the student and the payee against a SYNTHETIC list (data/screening/watchlist_synthetic.json); a real deployment must use the lists the bank is required to use."
     },
     "lrs_source_of_funds_declared": {
       "value": true,

@@ -1,7 +1,7 @@
 # Demo video script (target 4:50, hard limit 5:00)
 
 Written by Chandan; recorded by Nishanth (Plan v2 item 36). All data on screen is synthetic.
-Numbers below come from the engine with rule pack `2026.10.20-r1`; re-check them against the screen before recording.
+Numbers below come from the engine with rule pack `2026.10.19-r2`; re-check them against the screen before recording.
 
 **Before recording:** start a fresh server (`python -m app.server`), so no devices are enrolled. Use one browser profile for the parent and another for the student, or one browser holding both keys (risk R26, demo only). The demo PIN is in `app/demo_config.json`. Record at 1280x800 or larger so the agent panel stays on the right.
 

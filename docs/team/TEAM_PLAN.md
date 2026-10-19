@@ -1,6 +1,6 @@
 # Team plan and status
 
-The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.xlsx` in this folder, as it was on 16 Oct). The **Status** column (first written 17 Oct, updated 20 Oct) says what is in this repository now.
+The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.xlsx` in this folder, as it was on 16 Oct). The **Status** column (first written 17 Oct, updated 19 Oct) says what is in this repository now.
 
 - **Deadline:** Tue 20 Oct 2026, 23:59 Beijing = **21:29 IST**.
 - **First complete submission:** Sun 18 Oct night.
@@ -10,7 +10,7 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 
 ## Plan v2 items
 
-| # | Area | Item | Owner | Due | Status (20 Oct) | Where |
+| # | Area | Item | Owner | Due | Status (19 Oct) | Where |
 |---|---|---|---|---|---|---|
 | 1 | Task completion | Rules engine with tests (LRS cap, TCS cases, landed cost) | Chandan | Sat 17 | ✅ Done | `rules/engine.py`, `tests/test_rules.py`, `tests/test_finance_audit.py` |
 | 2 | Task completion | Year-to-date tracker across all LRS purposes | Chandan | Sat 17 | ✅ Done, and the agent now uses it | `rules/engine.py: YTDTracker` |
@@ -39,8 +39,8 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 | 25 | Innovation | Hidden-markup explainer | Chandan | Sat 17 | ✅ Done; names its mid-market source | `rules/explain.py`, `tests/test_markup.py` |
 | 26 | Innovation | Clear screens (planned: three) | Nishanth | Sun 18 | ✅ Done: landing, sign-in, 8 guided steps with a step bar, Assistant, Student money, attack lab | `app/static/` |
 | 27 | Innovation | Student and parent role switch | Nishanth | Mon 19 | ✅ Done as separate devices: the student prepares, a parent device signs | sign-in, handoff |
-| 28 | Innovation | Loan versus savings scenarios | Chandan | Tue 20 | ✅ Done: TCS both ways from verified rules, in the payment plan | `rules/planner.py: loan_option` |
-| 29 | Innovation | FX timing advice | Chandan | Tue 20 | ✅ Done as date timing, not rate forecasts: send-by date and financial-year timing | `rules/planner.py` |
+| 28 | Innovation | Loan versus savings scenarios | Chandan | Mon 19 | ✅ Done: TCS both ways from verified rules, in the payment plan | `rules/planner.py: loan_option` |
+| 29 | Innovation | FX timing advice | Chandan | Mon 19 | ✅ Done as date timing, not rate forecasts: send-by date and financial-year timing | `rules/planner.py` |
 | 30 | Deliverables | Registration email with form and watermarked passport pages | Chandan | Fri 16 | ✅ Sent; confirmed by the organisers on 19 Oct | `REGISTRATION_EMAIL.md` |
 | 31 | Deliverables | Repo skeleton, tooling, folders | Nishanth | Fri 16 | ✅ Done | whole repo |
 | 32 | Deliverables | Interface contract | Both | Fri 16 | ✅ Done, now **v1.1** with signatures | `docs/CONTRACT.md` |
@@ -61,12 +61,12 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 - what-if sliders;
 - the attack lab.
 
-**Added on 18-20 Oct (not in Plan v2):**
+**Added on 18-19 Oct (not in Plan v2):**
 - passwordless device sign-in, device enrolment approved by a parent device (R19), and the encrypted family vault;
 - PDF and JSON invoices; the student prepares and a parent device signs;
 - ten tax and RBI rules verified against primary sources; RBI compliance checks; a payment without a PAN is stopped;
 - the redesigned app (8 steps, assistant, attack-lab traces, printable receipt);
-- 20 Oct: the payment plan, Student money (budget, signed payment record), sanctions screening and source of funds, cookie-bound sessions (R25), grounded hosted-model answers.
+- 19 Oct (afternoon): the payment plan, Student money (budget, signed payment record), sanctions screening and source of funds, cookie-bound sessions (R25), grounded hosted-model answers.
 
 ## Scenarios (team sheet "Test scenarios" + 2 new)
 

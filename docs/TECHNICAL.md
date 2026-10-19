@@ -1,9 +1,9 @@
 # TuitionPilot: technical documentation
 
-Version 0.6, 20 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
+Version 0.6, 19 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (20 Oct 2026):** 271 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (180 entries) verifies · standard library only, nothing to install.
+**At a glance (19 Oct 2026):** 271 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (180 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -356,5 +356,5 @@ Two finance questions remain open and need a source before any change:
 - One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.
 - The scanner is pattern-based. It is a first line of defence; the policy engine must also refuse on its own.
 - Our Ed25519 code is plain Python: not constant-time and not audited. The demo keys are synthetic.
-- Open web-server items (R21, R22 in the self-assessment): no request timeout. Cross-site requests are refused (R20, fixed 18 Oct); sessions are bound to an HttpOnly cookie with an idle timeout (R25, fixed 20 Oct).
+- Open web-server items (R21, R22 in the self-assessment): no request timeout. Cross-site requests are refused (R20, fixed 18 Oct); sessions are bound to an HttpOnly cookie with an idle timeout (R25, fixed 19 Oct).
 - The sanctions list is synthetic and name-based (R27); send-by dates skip weekends but not bank holidays.
