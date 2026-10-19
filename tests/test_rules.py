@@ -6,7 +6,7 @@ from datetime import date
 from decimal import Decimal as D
 
 from rules import (RulePack, YTDTracker, Route, compute_tcs, lrs_headroom, landed_cost,
-                   compare_routes, financial_year)
+                   compare_routes, compliance_checks, financial_year)
 
 LAKH = D(100000)
 PACK = RulePack.load()
@@ -193,3 +193,43 @@ class TestLandedCost(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCompliance(unittest.TestCase):
+    """RBI LRS Master Direction (updated 6 Sep 2024) and Income-tax Act rules behind the compliance checks."""
+
+    def test_rbi_rules_are_verified_against_the_master_direction(self):
+        for rid in ("lrs_purpose_studies_abroad_permitted", "lrs_pan_mandatory", "lrs_form_a2_required",
+                    "lrs_studies_above_cap_on_institution_estimate"):
+            with self.subTest(rule=rid):
+                r = PACK.rules[rid]
+                self.assertEqual(r["status"], "verified")
+                self.assertTrue(r["source"].startswith("https://www.rbi.org.in/"))
+                self.assertEqual(r["effective_from"], "2024-09-06")
+
+    def test_all_met_for_a_self_funded_education_payment(self):
+        checks = compliance_checks(PACK, purpose="education", has_pan=True, within_cap=True, a2_status="ready")
+        self.assertTrue(all(c["ok"] is True for c in checks))
+        self.assertIn("tcs_rate_education_self_funded", [c["rule_id"] for c in checks])
+        for c in checks:
+            self.assertEqual(c["trace"]["pack_version"], PACK.version)
+            self.assertTrue(c["trace"]["source"])
+
+    def test_missing_pan_fails_the_pan_check(self):
+        checks = {c["rule_id"]: c for c in compliance_checks(PACK, purpose="education", has_pan=False, within_cap=True)}
+        self.assertIs(checks["lrs_pan_mandatory"]["ok"], False)
+        self.assertIsNone(checks["lrs_form_a2_required"]["ok"])  # A2 not ready yet: family action needed
+
+    def test_over_cap_points_to_the_institution_estimate_rule(self):
+        ids = {c["rule_id"]: c["ok"] for c in compliance_checks(PACK, purpose="education", has_pan=True, within_cap=False)}
+        self.assertIs(ids["lrs_annual_cap_usd"], False)
+        self.assertIn("lrs_studies_above_cap_on_institution_estimate", ids)
+
+    def test_loan_funded_uses_the_loan_rule(self):
+        ids = [c["rule_id"] for c in compliance_checks(PACK, purpose="education", has_pan=True, within_cap=True, funding="loan")]
+        self.assertIn("tcs_rate_education_loan_funded", ids)
+        self.assertNotIn("tcs_rate_education_self_funded", ids)
+
+    def test_non_education_purpose_fails(self):
+        checks = compliance_checks(PACK, purpose="gift", has_pan=True, within_cap=True)
+        self.assertIs(checks[0]["ok"], False)

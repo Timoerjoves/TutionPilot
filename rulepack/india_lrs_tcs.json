@@ -1,6 +1,6 @@
 {
   "pack_id": "india-lrs-tcs",
-  "version": "2026.10.18-r1",
+  "version": "2026.10.19-r1",
   "jurisdiction": "IN",
   "description": "India outbound education remittances under the Liberalised Remittance Scheme (LRS): annual cap and tax collected at source (TCS). Draft: secondary sources only. Check every rule against RBI and Income Tax Department sources before relying on it.",
   "rules": {
@@ -103,6 +103,38 @@
       "source": "https://www.sc.bank.in/important-information/lrs-amendment-in-tcs/",
       "check_against": "Provider fee schedule",
       "note": "GST applies to conversion and remittance service charges. The rate is taken from each route's own fee schedule."
+    },
+    "lrs_purpose_studies_abroad_permitted": {
+      "value": true,
+      "effective_from": "2024-09-06",
+      "status": "verified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
+      "check_against": "RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024); FEMA (Current Account Transactions) Rules 2000, Schedule III para 1",
+      "note": "Checked 19 Oct 2026 against the primary text. Master Direction para 7 lists 'studies abroad' among the current account transactions available to resident individuals under Para 1 of Schedule III, subsumed under the LRS limit. TuitionPilot only pays invoices whose purpose is education."
+    },
+    "lrs_pan_mandatory": {
+      "value": true,
+      "effective_from": "2024-09-06",
+      "status": "verified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
+      "check_against": "RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024)",
+      "note": "Checked 19 Oct 2026 against the primary text. Master Direction para 16: 'It is mandatory for the resident individual to provide his/her Permanent Account Number (PAN)' for remittances under the Scheme. Without a PAN the bank should not process the remittance; tcs_rate_no_pan is kept only to show the cost if one is missing."
+    },
+    "lrs_form_a2_required": {
+      "value": true,
+      "effective_from": "2024-09-06",
+      "status": "verified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
+      "check_against": "RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024)",
+      "note": "Checked 19 Oct 2026 against the primary text. Master Direction para 15: the resident individual 'should furnish Form A2' for purchase of foreign exchange under LRS, and designates one AD bank branch for remittances under the Scheme. TuitionPilot drafts an A2-style form; the bank's own A2 must be signed and submitted."
+    },
+    "lrs_studies_above_cap_on_institution_estimate": {
+      "value": true,
+      "effective_from": "2024-09-06",
+      "status": "verified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
+      "check_against": "RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024)",
+      "note": "Checked 19 Oct 2026 against the primary text. Master Direction para 7(h): for studies abroad, AD banks may allow amounts exceeding USD 2,50,000 'based on the estimate received from the institution abroad'. TuitionPilot does not apply this itself: a payment above the cap is escalated to the family and their bank."
     }
   }
 }

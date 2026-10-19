@@ -23,7 +23,7 @@ from app.sandbox import IST, BankError, SandboxBank
 from contract import ContractError, landed_cost_result, lrs_result, plan_hash, validate
 from forms import build_a2_draft
 from forms.a2 import CHECKLIST
-from rules import RulePack, YTDTracker, compare_routes, lrs_headroom
+from rules import RulePack, YTDTracker, compare_routes, compliance_checks, lrs_headroom
 from rules.explain import explain_comparison, explain_markup, inr, tcs_sentence
 from security import Masker, ModelSawLog, ground_or_replace, prepare_for_model, scan
 from security.pki import TrustStore, verify_approval, split as split_signed
@@ -583,6 +583,9 @@ class Agent:
                                     corridor, funding=funding, landed=chosen["cost"], documents=s["documents"],
                                     registry_mismatch=reg_entry_mismatch)
         s["draft"]["sections"]["remitter"]["pan"] = display_pan(a.get("pan"), s["masker"]) or "[no PAN]"
+        s["draft"]["compliance"] = jsonable(compliance_checks(self.pack, purpose=inv.get("purpose", "education"),
+                                                              has_pan=bool(a.get("pan")), within_cap=lrs.within_cap,
+                                                              funding=funding, a2_status=s["draft"]["status"]))
         self._tool(s, "draft_form")
         self._build_plan(s)
         if s["escalations"]:
@@ -880,10 +883,14 @@ class Agent:
                               "amount": f"{s['invoice']['amount']['currency']} {s['invoice']['amount']['value']}",
                               "remitter_pan": display_pan(a.get("pan"), s["masker"]) or "none",
                               "funding": a.get("funding"), "prior_lrs_inr": a.get("prior_inr")},
+            "payer": {"name": a.get("remitter_name"), "relationship": a.get("relationship")},
+            "student": s["invoice"].get("student") or {}, "purpose": s["invoice"].get("purpose", "education"),
+            "payee_bank": s["invoice"]["payee"].get("bank") or {},
+            "fx_rate": chosen["quote"]["fx_rate"], "fee_inr": chosen["quote"]["fee_inr"],
             "route": chosen["route"], "provider": chosen["quote"]["provider"],
             "lines": [{"label": l["label"], "amount_inr": l["amount_inr"]} for l in chosen["lines"]],
-            "rules_used": [{"rule_id": t["rule_id"], "pack_version": t["pack_version"], "status": t["status"]}
-                           for t in chosen["trace"]],
+            "rules_used": list({t["rule_id"]: {k: t.get(k) for k in ("rule_id", "pack_version", "status", "effective_from", "source")}
+                                for t in chosen["trace"] + [c["trace"] for c in s["draft"].get("compliance", [])]}.values()),
             "needs_verification": chosen["needs_verification"],
             "plan_id": s["plan"]["plan_id"], "plan_hash": s["plan"]["plan_hash"],
             "approval": {k: s["approval"][k] for k in ("approval_id", "method", "decided_at")} | {"role": "parent"}

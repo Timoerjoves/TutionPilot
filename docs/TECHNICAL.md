@@ -71,6 +71,9 @@ All money uses Python `Decimal`. Rupee amounts are rounded to paise (half-up); T
 
 The engine never hard-codes a rate. Every result carries a **trace**: the rule id, pack version, effective date, status and source of each rule it used. Any rule marked `unverified` is listed in `needs_verification`, and the user interface must show it as unverified.
 
+**Compliance checks** (`rules/engine.py: compliance_checks`, added 19 Oct): five pass/fail checks for each payment, each with its rule trace, shown on the Documents & A2 step and listed on the receipt:
+purpose is studies abroad (`lrs_purpose_studies_abroad_permitted`), within the LRS limit (`lrs_annual_cap_usd`; above it, `lrs_studies_above_cap_on_institution_estimate` says only the bank can allow more on the university's estimate), PAN provided (`lrs_pan_mandatory`), Form A2 to the bank (`lrs_form_a2_required`) and the TCS rule applied (self-funded or loan). The four new RBI rules were checked on 19 Oct 2026 against the RBI Master Direction on LRS (updated 6 Sep 2024), paras 7, 7(h), 15 and 16, and are marked `verified`.
+
 If a calculation is asked for a date before a rule took effect (for example, the 2% education rate before 1 April 2026), the engine refuses instead of guessing.
 
 ### 3.2 TCS on an education remittance
@@ -295,12 +298,12 @@ GitHub Actions runs the tests on every push.
   - **Student prepares, parent signs:** a signed-in student can prepare a payment and ask a parent to sign (`Agent.request_parent`). A signed-in parent device opens it (`Agent.take_over`); it moves to a new session id, so the student's old id stops working and a student device can never act as the parent.
   - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
   - Changing the route or the plan voids the approval.
-  - The receipt records masked inputs, rules used and their versions, the approval, the plan hash, the transaction and its audit-entry hash.
-- **Invoices:** pasted text, synthetic samples, JSON test invoices (`data/invoices/`) or PDF (`agent/pdf.py`, standard library, up to 2 MB, no OCR). An unsigned invoice can be read and explained but never paid.
+  - The receipt records masked inputs, payer and payee (with the signed bank details), FX rate, fee, TCS, every rule used with its version, effective date and source (including the compliance-check rules), the approval, the plan hash, the transaction and the audit head hash at payment. The app shows it as a printable document (company name as a text heading, A4 print CSS) so the browser's Print / Save as PDF gives a clean receipt marked "Sandbox: no real money moved".
+- **Invoices:** file upload or drag-and-drop (PDF, JSON, text), an inline paste box (fallback), synthetic samples, JSON test invoices (`data/invoices/`) or PDF (`agent/pdf.py`, standard library, up to 2 MB, no OCR). An unsigned invoice can be read and explained but never paid.
 - **UI** (`app/static/`): plain HTML, CSS and JavaScript.
   - **Landing page** (`/`), then **passwordless sign-in** (`/signin`, see 4.7).
   - **A guided six-step story:** Welcome (two consents) → Invoice (animated signature-chain check) → Questions (one at a time) → Best route (cost-on-top chart, what-if sliders, LRS gauge) → Review & sign (PIN pad; the device signs the plan) → Receipt.
-  - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent), the **Family vault** (4.8), Settings (cap, emergency stop, device approval) and delete-my-data.
+  - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent; each result opens a step-by-step trace: the attacker's input, every audit entry the run wrote with its hash, each policy Decision as tier, code and reason, the steps where a defence fired, and the scenario check. `app/lab.py` collects the entries through a tap on the audit log while the run holds the server lock), the **Family vault** (4.8), Settings (cap, emergency stop, device approval) and delete-my-data.
   - Every value is HTML-escaped.
   - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
 

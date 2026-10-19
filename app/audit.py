@@ -23,6 +23,8 @@ def entry_hash(entry):
 
 
 class AuditLog:
+    tap = None  # the attack lab sets a list here to collect every entry a lab run writes (server calls hold one lock)
+
     def __init__(self, path=None):
         self.entries = []
         self.path = Path(path) if path else None
@@ -36,6 +38,8 @@ class AuditLog:
              "event": event, "session": session, "data": data or {}, "prev": self.head}
         e["hash"] = entry_hash(e)
         self.entries.append(e)
+        if AuditLog.tap is not None:
+            AuditLog.tap.append(e)
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "a", encoding="utf-8") as f:

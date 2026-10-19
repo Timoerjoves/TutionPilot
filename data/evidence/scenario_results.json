@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-10-18T06:02:28+00:00",
+  "generated_at": "2026-10-19T03:53:01+00:00",
   "rule_pack": {
     "id": "india-lrs-tcs",
-    "version": "2026.10.18-r1"
+    "version": "2026.10.19-r1"
   },
   "python": "3.14.6",
   "counts": {
@@ -216,7 +216,7 @@
       "owner": "Chandan",
       "verify": false,
       "status": "PASS",
-      "actual": "action=block, categories=['auto_approve', 'prompt_injection']",
+      "actual": "action=block, categories=['auto_approve', 'prompt_injection']; agent flagged=True",
       "needs_verification": []
     },
     {
@@ -238,7 +238,7 @@
       "owner": "Chandan",
       "verify": false,
       "status": "PASS",
-      "actual": "action=block, categories=['data_extraction']",
+      "actual": "action=block, categories=['data_extraction']; agent flagged=True",
       "needs_verification": []
     },
     {
@@ -249,7 +249,7 @@
       "owner": "Chandan",
       "verify": false,
       "status": "PASS",
-      "actual": "action=block, categories=['auto_approve', 'privilege_escalation']",
+      "actual": "action=block, categories=['auto_approve', 'privilege_escalation']; agent flagged=True",
       "needs_verification": []
     },
     {

@@ -95,6 +95,7 @@ Key properties:
 | Only parent devices can sign approvals; student devices can sign in and use the vault only | `app/policy.py: register_parent_key / register_student_key` | `test_family.py` |
 | Encrypted family vault; server stores ciphertext only and hands each device only its own wrapped key | `app/static/app.js: uploadDoc, openDoc`, `app/family.py: put, get_for` | `test_family.py` (server rules); browser round-trip checked 18 Oct |
 | PDF invoices read with size and zip-bomb limits; encrypted and scanned PDFs refused; an unsigned invoice can never be paid | `agent/pdf.py` | `test_pdf.py` |
+| RBI LRS compliance checks (purpose, yearly limit, PAN, Form A2, TCS rule) with sourced, verified rules shown per payment and on the receipt | `rules/engine.py: compliance_checks`, `rulepack/india_lrs_tcs.json` | `test_rules.py: TestCompliance` |
 | Web server hardening | `app/server.py`, `app/static/app.js` | `test_server.py` |
 | Sourced, versioned rules; unverified rules flagged | `rulepack/`, `rules/engine.py` trace | `test_rules.py` |
 | Refuse dates before a rule took effect | `check_effective` | `test_rules.py` |
@@ -128,7 +129,7 @@ Run with `python -m unittest tests.test_attacks -v`. All 8 pass (18 Oct 2026).
 
 ### 6.2 Attack lab (16 of 16 stopped)
 
-The app's Attack lab runs each attack against a separate copy of the agent and shows which defence stopped it. We ran all 16 on 18 Oct 2026; all were stopped.
+The app's Attack lab runs each attack against a separate copy of the agent and shows which defence stopped it. We ran all 16 on 18 Oct 2026; all were stopped. Since 19 Oct each result opens a trace of how it was caught: the attacker's input, every hash-chained audit entry the run wrote, each policy Decision (allowed, tier, code, reason), and the entries where a defence fired. The three text attacks (C1, C3, C4) now go through a real agent (invoice upload or chat), so their trace shows the scanner flag and the T4 denial, not only the scanner verdict. C5 (grounding) and D1 (masking) are standalone checks and write no audit entries; their trace says so.
 
 | Id | Attack | Defence that stops it |
 |---|---|---|

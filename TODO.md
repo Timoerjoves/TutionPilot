@@ -4,6 +4,19 @@
 - **First complete submission:** Sun 18 Oct night. Updates are allowed until the deadline, and the latest version counts.
 - **Full plan with status:** [docs/team/TEAM_PLAN.md](docs/team/TEAM_PLAN.md).
 
+## 19 Oct changes (branch `claude/vigorous-leakey-2e8f90`)
+- Attack lab: each result opens a step-by-step trace (attacker input, every audit entry with its hash, policy Decision tier/code/reason, where the defence fired, scenario check). C1, C3 and C4 now run through a real agent.
+- Invoice: the paste `prompt()` is now an inline paste box; file upload and drag-and-drop (PDF, JSON, text) stay.
+- Receipt: printable A4 document with a text heading (no logo), payer, payee, FX rate, fee, TCS, rule trace with sources, ids, audit head hash and a sandbox note.
+- Rule pack 2026.10.19-r1: four RBI LRS rules verified against the Master Direction (purpose, PAN mandatory, Form A2, above-cap on the institution's estimate); `compliance_checks()` shown on the Documents step and the receipt.
+- Fix: the Payment tab no longer returns to the Attack lab.
+
+## Open decisions (19 Oct)
+- [ ] OCR for scanned PDFs and photos: Tesseract run directly (Apache-2.0, local; recommended), pytesseract, or a hosted vision model (sends unmasked images; not advised). Needs the team's OK before adding anything.
+- [ ] Logo: remove the swirl and favicon across the whole app, or only on the receipt (done)?
+- [ ] Missing PAN: the rule pack says PAN is mandatory under LRS, but the app still allows a no-PAN payment at the higher TCS rate. Block it?
+- [ ] Slimmer student view (upload, check, send to parent, read-only status, no settings drawer): build or not?
+
 ## Urgent
 - [ ] **Chandan: send the registration email.** It was due Fri 16, and registration can close early.
   - Fill the [brackets] in `docs/team/REGISTRATION_EMAIL.md`.

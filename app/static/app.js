@@ -13,7 +13,7 @@ let enrolReq = null;                  // a new device's enrolment request this p
 let device = null;                    // this role's device keys from IndexedDB (see common.js)
 let vaultDocs = null;                 // vault listing for this device
 let pin = "";
-let labList = null, labResults = {};
+let labList = null, labResults = {}, labOpen = new Set(), pasteOpen = false;
 let wf = null, wfTimer = null;
 let payProgress = null;               // steps shown while a payment runs
 
@@ -253,8 +253,12 @@ function vUpload() {
         <p class="muted small">PDF, JSON or text, up to 2 MB</p>
         <div class="row" style="justify-content:center;margin-top:16px">
           <label class="btn primary" style="cursor:pointer">Choose a file<input type="file" id="file" accept=".pdf,.txt,.json,application/pdf,text/plain,application/json" hidden></label>
-          <button class="btn" data-act="paste">Paste text</button></div>
+          <button class="btn" data-act="paste">${pasteOpen ? "Hide paste box" : "Paste text instead"}</button></div>
       </div>
+      ${pasteOpen ? `<form id="paste-form" class="paste-box"><label for="paste-in" class="small"><b>Invoice text</b>
+          <span class="muted">Include the signature block (from <span class="mono">-----BEGIN</span> to <span class="mono">END-----</span>) or it cannot be verified.</span></label>
+        <textarea id="paste-in" rows="9" spellcheck="false" placeholder="Paste the full invoice text here"></textarea>
+        <div class="row" style="justify-content:flex-end"><button class="btn primary" type="submit">Read this invoice</button></div></form>` : ""}
     </section>
     <section class="card">
       <div class="row between"><h2>Or try a sample</h2><span class="muted small">Synthetic data${info("Genuine samples are signed by a synthetic university. Attack samples show what the agent refuses: changed bank details, hidden instructions, look-alike universities, revoked or missing signatures.")}</span></div>
@@ -499,6 +503,11 @@ function vDocuments() {
         ${sec("Purpose", { code: s.purpose.code + " (unverified)", description: s.purpose.description })}
       </section>
       <div class="stack">
+        ${(d.compliance || []).length ? `<section class="card"><h2>Compliance checks${info("Each line is one RBI or Income-tax rule from the rule pack, with its source. Verified means checked against the official RBI or incometaxindia.gov.in text.")}</h2>
+          <ul class="checks">${d.compliance.map((c) => `<li class="${c.ok === true ? "ok" : c.ok === false ? "bad" : "todo"}"><span class="ck">${c.ok === true ? "✓" : c.ok === false ? "✕" : "!"}</span>
+            <span><b>${esc(c.check)}</b><br><span class="muted small">${esc(c.detail)}</span><br>
+            <a class="mono tiny faint" href="${esc(c.trace.source)}" target="_blank" rel="noopener noreferrer">${esc(c.rule_id)} · v${esc(c.trace.pack_version)}${c.trace.effective_from ? " · from " + esc(c.trace.effective_from) : ""}</a>
+            <span class="badge ${c.trace.status === "verified" ? "ok" : "warn"}">${esc(c.trace.status)}</span></span></li>`).join("")}</ul></section>` : ""}
         <section class="card">
           <div class="row between"><h2>Documents</h2><span class="muted small num">${have} of ${d.checklist.length}</span></div>
           <div class="meter"><i style="width:${pct}%"></i></div>
@@ -537,27 +546,56 @@ function vAssistant() {
 function vReceipt() {
   if (!V.receipt) return empty("No payment yet", "Sign and send the plan first.", "sign");
   const r = V.receipt;
-  return `<section class="card receipt-hero">
+  return `<section class="card receipt-hero no-print">
       <div class="check-anim"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <div class="eyebrow">Step 8 of 8 · Paid in the sandbox</div>
       <div class="big-amount num" style="margin:8px 0">${esc(inr(V.txn.debit_inr))}</div>
       <p class="muted">${esc(r.inputs_masked.amount)} to ${esc(r.inputs_masked.payee)} via ${esc(r.route)}</p>
     </section>
-    <section class="card" id="receipt">
-      <div class="row between"><h2>Decision receipt</h2><span class="badge ok">✓ Verifiable</span></div>
-      <dl class="kv" style="margin-top:12px">
-        <dt>Receipt</dt><dd class="mono">${esc(r.receipt_id)}</dd><dt>Transaction</dt><dd class="mono">${esc(r.txn_id)}</dd>
-        <dt>University</dt><dd>${esc(r.inputs_masked.payee)} · certificate <span class="mono">${esc(r.payee_certificate)}</span></dd>
-        <dt>Signed by parent</dt><dd><span class="mono">${esc(r.approval.signed_by)}</span> · PIN · ${esc(r.approval.decided_at)}</dd>
-        <dt>Signature</dt><dd class="mono">${esc(short(r.approval.signature, 32))}</dd>
-        <dt>Plan hash</dt><dd class="mono">${esc(r.plan_hash)}</dd><dt>Audit entry</dt><dd class="mono">${esc(r.audit_entry_hash)}</dd>
-        <dt>Remitter PAN</dt><dd>${esc(r.inputs_masked.remitter_pan)}</dd>
-        <dt>Rules used</dt><dd>${r.rules_used.map((u) => `${esc(u.rule_id)} <span class="badge ${u.status === "unverified" ? "warn" : "muted"}">${esc(u.status)}</span>`).join("<br>")}</dd>
-      </dl>
-      <p class="faint tiny" style="margin-top:12px">${r.labels.map(esc).join(" · ")}</p>
-      <div class="row no-print" style="margin-top:12px"><button class="btn" data-act="print">Print</button>
-        <button class="btn" data-act="pay">Send again (test: pays once)</button><button class="btn primary" data-go="upload">Pay another invoice</button></div>
-    </section>`;
+    ${receiptDoc(r)}
+    <div class="row no-print" style="justify-content:center;margin-top:4px"><button class="btn primary" data-act="print">Print or save as PDF</button>
+      <button class="btn" data-act="pay">Send again (test: pays once)</button><button class="btn" data-go="upload">Pay another invoice</button></div>`;
+}
+
+function receiptDoc(r) {
+  const t = V.txn, a = r.inputs_masked, line = (l) => (r.lines.find((x) => x.label === l) || {}).amount_inr;
+  const when = (iso) => new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+  const kv = (rows) => `<dl>${rows.filter(([, v]) => v).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join("")}</dl>`;
+  return `<article class="rcpt" id="receipt" aria-label="Payment receipt">
+    <header class="rcpt-head"><div><div class="rcpt-name">TuitionPilot</div><div class="rcpt-sub">Cross-border tuition payments · sandbox</div></div>
+      <div class="rcpt-title"><h1>Payment receipt</h1><span class="mono">${esc(r.receipt_id)}</span><span>${esc(when(r.issued_at))}</span></div></header>
+    <div class="rcpt-sandbox">SANDBOX · NO REAL MONEY MOVED · SYNTHETIC DATA</div>
+    <section class="rcpt-amount"><div><small>Amount debited</small><b class="num">${esc(inr(t.debit_inr, true))}</b>
+        <span>${esc(money(t.foreign_amount.value, t.foreign_amount.currency))} to ${esc(a.payee)}</span></div><span class="rcpt-paid">✓ ${esc(t.status)}</span></section>
+    <section class="rcpt-cols">
+      <div><h2>Paid by</h2>${kv([["Name", esc(r.payer.name)], ["Relationship to student", esc(r.payer.relationship)],
+        ["PAN", esc(a.remitter_pan)], ["Source of funds", esc(a.funding === "loan" ? "Education loan" : "Own funds")],
+        ["Earlier LRS this year", esc(inr(a.prior_lrs_inr))], ["Debit account", `<span class="mono">${esc(t.account_id)}</span>`]])}</div>
+      <div><h2>Paid to</h2>${kv([["University", esc(a.payee)], ["Registry id", `<span class="mono">${esc(a.payee_registry_id)}</span>`],
+        ["Bank account", `<span class="mono">${esc(r.payee_bank.account_masked)}</span>`], ["SWIFT", `<span class="mono">${esc(r.payee_bank.swift)}</span>`],
+        ["Certificate", `<span class="mono">${esc(r.payee_certificate)}</span> (signature verified)`],
+        ["Student", esc(r.student.name ? `${r.student.name} · ${r.student.student_id || ""}` : "")], ["Invoice", `<span class="mono">${esc(a.invoice_id)}</span>`],
+        ["Purpose", esc(r.purpose === "education" ? "Education (tuition), LRS current-account purpose" : r.purpose)]])}</div>
+    </section>
+    <section><h2>Amount breakdown</h2><table class="rcpt-table"><tbody>
+      <tr><td>Invoice amount</td><td class="num">${esc(money(t.foreign_amount.value, t.foreign_amount.currency))}</td></tr>
+      <tr><td>Exchange rate (${esc(r.provider)}, route ${esc(r.route)})</td><td class="num">1 ${esc(t.foreign_amount.currency)} = Rs ${esc(r.fx_rate)}</td></tr>
+      <tr><td>Amount sent</td><td class="num">${esc(inr(line("Amount sent"), true))}</td></tr>
+      <tr><td>Provider fee</td><td class="num">${esc(inr(r.fee_inr, true))}</td></tr>
+      <tr><td>TCS collected by the bank (Income-tax Act)</td><td class="num">${esc(inr(line("TCS"), true))}</td></tr>
+      <tr class="tot"><td>Total debited</td><td class="num">${esc(inr(t.debit_inr, true))}</td></tr></tbody></table></section>
+    <section><h2>Rules applied</h2><table class="rcpt-table rules"><thead><tr><th>Rule</th><th>Status</th><th>Effective</th><th>Source</th></tr></thead><tbody>
+      ${r.rules_used.map((u) => `<tr><td class="mono">${esc(u.rule_id)}</td><td>${u.status === "verified" ? "Verified" : '<b class="warn">Unverified</b>'}</td>
+        <td class="nw">${esc(u.effective_from || "–")}</td><td class="src">${u.source ? `<a href="${esc(u.source)}" rel="noopener noreferrer" target="_blank">${esc(u.source)}</a>` : "–"}</td></tr>`).join("")}</tbody></table>
+      <p class="rcpt-note">Rule pack ${esc((r.rules_used[0] || {}).pack_version || "")}. ${r.needs_verification.length ? "Unverified rules must be confirmed with your bank before relying on these figures." : ""}</p></section>
+    <section><h2>Transaction and approval</h2>${kv([["Transaction id", `<span class="mono">${esc(r.txn_id)}</span>`], ["Settled at", esc(when(t.at))],
+      ["Approval id", `<span class="mono">${esc(r.approval.approval_id)}</span>`],
+      ["Approved by", `Parent device <span class="mono">${esc(r.approval.signed_by)}</span> with ${esc(r.approval.method.toUpperCase())}, ${esc(when(r.approval.decided_at))}`],
+      ["Plan", `<span class="mono">${esc(r.plan_id)}</span>`], ["Plan hash", `<span class="mono">${esc(r.plan_hash)}</span>`],
+      ["Audit head hash", `<span class="mono">${esc(r.audit_entry_hash)}</span>`]])}</section>
+    <footer class="rcpt-foot"><b>Sandbox: no real money moved.</b> Payment executed in the TuitionPilot simulated bank after a parent-signed approval.
+      ${r.labels.filter((l) => !/sandbox/i.test(l)).map(esc).join(" · ")}. Check the audit chain with <span class="mono">python -m app.audit verify</span>.</footer>
+  </article>`;
 }
 
 /* ---------- attack lab ---------- */
@@ -575,11 +613,49 @@ function vLab() {
     <div class="lab-grid">${labList.map((a) => {
       const r = labResults[a.id];
       const res = r === "running" ? `<div class="res"><span class="spinner"></span> Attacking…</div>`
-        : r ? `<div class="res ${r.stopped ? "ok" : "bad"}"><span class="shield">${r.stopped ? "🛡" : "⚠"}</span> <b>${r.stopped ? "Stopped by" : "NOT stopped:"} ${esc(r.defence)}</b><br><span class="muted">${esc(r.actual)}</span></div>` : "";
-      return `<div class="attack ${r && r !== "running" && r.stopped ? "stopped" : ""}"><span class="who">Attacker tries</span><b>${esc(a.attack)}</b>
-        <span class="muted small">Defence: ${esc(a.defence)}</span>${res}
-        <button class="btn sm" data-lab="${esc(a.id)}" ${r === "running" ? "disabled" : ""}>${r ? "Run again" : "Run attack"}</button></div>`;
+        : r ? `<div class="res ${r.stopped ? "ok" : "bad"}"><span class="shield">${r.stopped ? "🛡" : "⚠"}</span> <b>${r.stopped ? "Stopped by" : "NOT stopped:"} ${esc(r.defence)}</b></div>` : "";
+      const open = r && r !== "running" && labOpen.has(a.id);
+      return `<div class="attack ${r && r !== "running" && r.stopped ? "stopped" : ""} ${open ? "open" : ""}"><span class="who">Attacker tries</span><b>${esc(a.attack)}</b>
+        <span class="muted small">Defence: ${esc(a.defence)}</span>${res}${open ? labTrace(r) : ""}
+        <div class="row"><button class="btn sm" data-lab="${esc(a.id)}" ${r === "running" ? "disabled" : ""}>${r ? "Run again" : "Run attack"}</button>
+        ${r && r !== "running" ? `<button class="btn sm" data-lab-open="${esc(a.id)}">${open ? "Hide trace" : "How it was caught"}</button>` : ""}</div></div>`;
     }).join("")}</div>`;
+}
+
+const EVENT_LABEL = { parent_key_registered: "Parent device key registered", session_started: "Session started",
+  consent: "Consent recorded", plan_built: "Payment plan built and hashed", approved: "Parent approval accepted",
+  approval_refused: "Approval refused", approval_void: "Old approval voided", payment_executed: "Sandbox payment executed",
+  payment_refused: "Payment refused", bank_refused: "Sandbox bank refused", receipt_written: "Receipt written",
+  duplicate_click: "Second click: no new payment", untrusted_text_flagged: "Untrusted-text scanner fired",
+  escalated: "Escalated to a person", settings_change: "Settings change checked", route_chosen: "Route chosen",
+  plan_tampered_demo: "Plan edited after approval (attack)", session_deleted: "Session data deleted" };
+const stepTitle = (t) => t.event === "policy_decision" ? `Policy engine: ${t.data.action.replace(/_/g, " ")}`
+  : t.event === "tool_call" ? `Tool call: ${t.data.tool.replace(/_/g, " ")}` : EVENT_LABEL[t.event] || t.event.replace(/_/g, " ");
+const stepValue = (v) => Array.isArray(v) ? v.map((x) => x && typeof x === "object" ? x.category || x.step || JSON.stringify(x) : x).join(" → ")
+  : v && typeof v === "object" ? JSON.stringify(v) : String(v);
+function labTrace(r) {
+  const skip = new Set(["allowed", "tier", "code", "reason", "action", "escalate", "tool"]);
+  // fold the routine set-up (fresh agent reads a genuine invoice, builds a plan) so the attack itself stands out
+  const first = r.trace.findIndex((t) => t.fired), lead = first < 0 ? r.trace.length : first;
+  const built = r.trace.slice(0, lead).map((t) => t.event).lastIndexOf("plan_built");
+  const fold = built >= 0 ? built + 1 : lead;
+  const steps = r.trace.map((t) => {
+    const d = t.decision, facts = Object.entries(t.data).filter(([k]) => !skip.has(k))
+      .map(([k, v]) => `<span><i>${esc(k.replace(/_/g, " "))}</i> ${esc(stepValue(v).slice(0, 90))}</span>`).join("");
+    return `<li class="${t.fired ? "fired" : ""}"><div class="t-head"><b>${esc(stepTitle(t))}</b>
+        <span class="mono faint">${r.trace.some((x) => x.run > 1) ? `run ${t.run} · ` : ""}#${t.seq} · ${esc(t.hash)}…</span></div>
+      ${d ? `<div class="t-dec"><span class="badge ${d.allowed ? "ok" : "deny"}">${d.allowed ? "ALLOW" : "DENY"}</span>
+        <span class="tier" style="--c:${d.allowed ? "var(--ok)" : "var(--deny)"}">${esc(d.tier)}</span> <span class="mono">${esc(d.code)}</span> <span class="muted">${esc(d.reason)}</span></div>` : ""}
+      ${facts ? `<div class="t-facts">${facts}</div>` : ""}</li>`;
+  });
+  const setup = fold > 1 ? `<li class="setup"><details><summary><b>Set-up: ${fold} routine steps</b> <span class="muted">fresh agent, consent, invoice read and checked, plan built</span></summary>
+      <ol class="timeline">${steps.slice(0, fold).join("")}</ol></details></li>` : steps.slice(0, fold).join("");
+  return `<div class="lab-trace">
+    <div class="t-in"><small>Attacker input</small><div class="mono">${esc(r.input)}</div></div>
+    <ol class="timeline">${r.trace.length ? setup + steps.slice(fold).join("") : `<li><div class="t-head"><b>No agent session involved</b></div><div class="t-facts"><span>This defence runs as a standalone check, so it writes no audit entries.</span></div></li>`}
+      <li class="${r.stopped ? "verdict" : "fired"}"><div class="t-head"><b>Scenario check: ${r.stopped ? "attack stopped" : "attack NOT stopped"}</b></div>
+        <div class="t-facts"><span><i>expected</i> ${esc(r.expected)}</span><span><i>observed</i> ${esc(r.actual)}</span></div></li></ol>
+    <p class="faint tiny">Steps marked red are where a defence fired. Each line is one entry of the hash-chained audit log written by a fresh, separate agent.</p></div>`;
 }
 
 function empty(t, d, goTo) {
@@ -864,7 +940,7 @@ document.addEventListener("click", async (ev) => {
   if (!t || !V) return;
   const d = t.dataset;
   if (d.go) return go(d.go);
-  if (d.page === "pay") { const last = store.get("tp.view", ""); return go(reachable(last) ? last : autoStep()); }
+  if (d.page === "pay") { const last = store.get("tp.view", ""); return go(reachable(last) && !PAGES.includes(last) ? last : autoStep()); }
   if (d.page) { if (d.page === "vault") vaultDocs = null; return go(d.page); }
   if (d.side) { side = d.side; store.set("tp.side", side); return render(); }
   if (d.sample) return addInvoice({ sample: d.sample });
@@ -872,6 +948,7 @@ document.addEventListener("click", async (ev) => {
   if (d.answer) return act("answer", { field: V.question.field, value: d.answer });
   if (d.route) return d.route !== V.chosen_quote_id && act("route", { quote_id: d.route }, { advance: false });
   if (d.lab) return runLab(d.lab);
+  if (d.labOpen) { labOpen.has(d.labOpen) ? labOpen.delete(d.labOpen) : labOpen.add(d.labOpen); return render(); }
   if (d.set) return changeSetting(d.set);
   if (d.wfFunding) { wf.funding = d.wfFunding; return whatif(); }
   if (d.wfPan) { wf.has_pan = d.wfPan === "1"; return whatif(); }
@@ -883,11 +960,7 @@ document.addEventListener("click", async (ev) => {
   }
   switch (d.act) {
     case "consent": return act("consent", { accept: true });
-    case "paste": {
-      const text = prompt("Paste the invoice text (including any signature block):");
-      if (text) addInvoice({ text });
-      return;
-    }
+    case "paste": pasteOpen = !pasteOpen; render(); if (pasteOpen) $("#paste-in").focus(); return;
     case "refresh": return act("refresh", {}, { advance: false });
     case "pay": return pay();
     case "tamper_plan": return act("tamper_plan", {}, { advance: false });
@@ -966,6 +1039,12 @@ document.addEventListener("submit", async (ev) => {
     const v = $("#ask-in").value.trim();
     if (v) say(v);
   }
+  if (ev.target.id === "paste-form") {
+    const v = $("#paste-in").value.trim();
+    if (!v) return toast("Paste the invoice text first.", true);
+    pasteOpen = false;
+    addInvoice({ text: v });
+  }
 });
 async function addInvoice(body) {  // every new invoice lands on the signature check
   const r = await act("invoice", body, { advance: false });
@@ -981,6 +1060,7 @@ async function readFile(f) {
   if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
     return addInvoice({ pdf: b64(new Uint8Array(await f.arrayBuffer())) });
   }
+  if (f.type.startsWith("image/")) return toast("Photos and scans need OCR, which is not switched on in this build. Upload the PDF or paste the text.", true);
   addInvoice({ text: await f.text() });
 }
 document.addEventListener("dragover", (ev) => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.add("over"); } });

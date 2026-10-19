@@ -297,6 +297,12 @@ class TestAgentFlow(unittest.TestCase):
         self.assertEqual(v["receipt"]["txn_id"], r["txn"]["txn_id"])
         self.assertTrue(v["audit"]["ok"])
         self.assertTrue(all(t["status"] == "done" for t in v["timeline"]))
+        rc = v["receipt"]  # the printable receipt needs these
+        self.assertTrue(rc["payer"]["name"] and rc["fx_rate"] and rc["fee_inr"] and rc["payee_bank"]["swift"])
+        used = {u["rule_id"]: u for u in rc["rules_used"]}
+        self.assertIn("lrs_pan_mandatory", used)
+        self.assertTrue(used["lrs_pan_mandatory"]["source"].startswith("https://www.rbi.org.in/"))
+        self.assertTrue(all(c["ok"] for c in v["draft"]["compliance"]))
         self.assertTrue((Path(self.tmp.name) / "sandbox_ledger.log").exists())
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(audit.main(["verify", str(Path(self.tmp.name) / "audit_log.jsonl")]), 0)
@@ -384,6 +390,24 @@ class TestAgentFlow(unittest.TestCase):
         self.assertTrue(ask("Which documents do I need?")["text"].startswith(("Still missing", "All listed")))
         self.assertIn("mid-market", ask("Is there a hidden markup?")["text"])
 
+
+
+class TestAttackLab(unittest.TestCase):
+    def test_trace_shows_the_defence_that_fired(self):
+        from app import lab
+        r = lab.run("C4")
+        self.assertTrue(r["stopped"])
+        self.assertEqual(r["input"], fx.ADMIN_CLAIM)
+        fired = [t for t in r["trace"] if t["fired"]]
+        self.assertIn("untrusted_text_flagged", [t["event"] for t in fired])
+        self.assertTrue(any(t["decision"] and t["decision"]["code"] == "never" and not t["decision"]["allowed"] for t in fired))
+        self.assertIsNone(audit.AuditLog.tap)  # the tap is removed after the run
+
+    def test_duplicate_click_trace(self):
+        from app import lab
+        r = lab.run("B5")
+        self.assertEqual([t["event"] for t in r["trace"] if t["fired"]], ["duplicate_click"])
+        self.assertEqual(sum(t["event"] == "payment_executed" for t in r["trace"]), 1)
 
 if __name__ == "__main__":
     unittest.main()

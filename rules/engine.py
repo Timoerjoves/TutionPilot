@@ -224,3 +224,31 @@ def compare_routes(pack, routes, foreign_amount, **kwargs):
         saving = (costs[i + 1].total_inr - c.total_inr) if i + 1 < len(costs) else None
         out.append({"rank": i + 1, "cost": c, "saving_vs_next_inr": saving})
     return out
+
+
+# ---------- Compliance checks (RBI LRS Master Direction, Income-tax Act) ----------
+
+def compliance_checks(pack, *, purpose, has_pan, within_cap, funding="self", a2_status=None):
+    """Pass/fail list of the regulatory conditions for one education remittance; each item carries its rule trace.
+    ok is True (met), False (not met: the bank should refuse) or None (action needed by the family)."""
+    def item(rule_id, check, ok, detail):
+        return {"rule_id": rule_id, "check": check, "ok": ok, "detail": detail, "trace": pack.trace(rule_id)}
+    over = [] if within_cap else [item("lrs_studies_above_cap_on_institution_estimate", "Above the LRS cap for studies",
+                                       None, "Only the bank can allow more, on the university's estimate. Escalated.")]
+    loan = funding == "loan"
+    return [
+        item("lrs_purpose_studies_abroad_permitted", "Purpose is permitted under LRS", purpose == "education",
+             "Studies abroad is a permitted current-account purpose." if purpose == "education"
+             else f"Purpose '{purpose}' is not studies abroad; TuitionPilot does not pay it."),
+        item("lrs_annual_cap_usd", "Within the LRS limit for the financial year", within_cap,
+             "Within USD 2,50,000 for April to March." if within_cap else "This payment exceeds the yearly LRS limit."),
+        *over,
+        item("lrs_pan_mandatory", "Remitter PAN provided", has_pan,
+             "PAN given (masked before any AI sees it)." if has_pan else "PAN is mandatory under LRS; the bank should refuse."),
+        item("lrs_form_a2_required", "Form A2 to the bank", None if a2_status != "ready" else True,
+             "A2-style draft is complete; sign and submit the bank's Form A2." if a2_status == "ready"
+             else "Complete the A2-style draft, then sign and submit the bank's Form A2."),
+        item("tcs_rate_education_loan_funded" if loan else "tcs_rate_education_self_funded",
+             "TCS on education remittance applied", True,
+             "Loan from a financial institution: no TCS." if loan else "2% above Rs 10 lakh in the financial year."),
+    ]
