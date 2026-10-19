@@ -470,9 +470,9 @@ class Agent:
         elif has("why", "cheap", "explain", "compare", "route"):
             self._say(s, "agent", s["explanation"]["shown"], tone="info")
         elif "tcs" in t or "tax" in t:
-            best = s["ranked"][0]
-            line = next(l for l in best["lines"] if l["label"] == "TCS")
-            self._say(s, "agent", line["text"] + " This is not tax advice.", tone="info")
+            chosen = self._chosen(s)
+            line = next(l for l in chosen["lines"] if l["label"] == "TCS")
+            self._say(s, "agent", f"TCS on {chosen['route']}: {inr(D(line['amount_inr']))}. " + line["text"] + " This is not tax advice.", tone="info")
         elif "limit" in t or "lrs" in t:
             l = s["lrs"]
             self._say(s, "agent", f"Your LRS headroom before this payment is about USD {D(l['headroom_before_usd']):,.0f}, "
@@ -585,7 +585,8 @@ class Agent:
         s["draft"]["sections"]["remitter"]["pan"] = display_pan(a.get("pan"), s["masker"]) or "[no PAN]"
         s["draft"]["compliance"] = jsonable(compliance_checks(self.pack, purpose=inv.get("purpose", "education"),
                                                               has_pan=bool(a.get("pan")), within_cap=lrs.within_cap,
-                                                              funding=funding, a2_status=s["draft"]["status"]))
+                                                              funding=funding, a2_status=s["draft"]["status"]
+                                                              if not s["draft"]["missing_documents"] else "documents"))
         self._tool(s, "draft_form")
         self._build_plan(s)
         if s["escalations"]:

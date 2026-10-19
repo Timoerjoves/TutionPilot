@@ -247,7 +247,7 @@ def compliance_checks(pack, *, purpose, has_pan, within_cap, funding="self", a2_
              "PAN given (masked before any AI sees it)." if has_pan else "PAN is mandatory under LRS; the bank should refuse."),
         item("lrs_form_a2_required", "Form A2 to the bank", None if a2_status != "ready" else True,
              "A2-style draft is complete; sign and submit the bank's Form A2." if a2_status == "ready"
-             else "Complete the A2-style draft, then sign and submit the bank's Form A2."),
+             else "Finish the A2-style draft and gather the listed documents, then sign and submit the bank's Form A2."),
         item("tcs_rate_education_loan_funded" if loan else "tcs_rate_education_self_funded",
              "TCS on education remittance applied", True,
              "Loan from a financial institution: no TCS." if loan else "2% above Rs 10 lakh in the financial year."),

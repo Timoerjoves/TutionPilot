@@ -316,7 +316,7 @@ function vQuestions() {
   const choices = q.kind === "choice"
     ? `<div class="choices">${q.options.map((o) => `<button class="choice" data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>`
     : `<form class="answer-row" id="answer" autocomplete="off">
-        <input id="answer-in" ${q.kind === "date" ? 'type="date"' : ""} placeholder="${q.field === "pan" ? "e.g. ABCDE1234F (synthetic)" : q.kind === "number" ? "e.g. 6 lakh or 600000" : "Type your answer"}" aria-label="Answer">
+        <input id="answer-in" ${q.kind === "date" ? 'type="date"' : ""} placeholder="${q.field === "pan" ? "e.g. ABCDE1234F (synthetic)" : q.field === "prior_usd" ? "e.g. 6600" : q.kind === "number" ? "e.g. 6 lakh or 600000" : "Type your answer"}" aria-label="Answer">
         <button class="btn primary">Next</button></form>
       ${q.options ? `<div class="choices" style="margin-top:10px">${q.options.map((o) => `<button class="choice" data-answer="${esc(o)}">${esc(o)}</button>`).join("")}</div>` : ""}`;
   return `${head}<section class="card qcard">${dots}<div class="qtext">${esc(q.text)}</div>${hint}${choices}
@@ -443,9 +443,14 @@ async function whatif() {
 function vSign() {
   if (!V.plan) return empty("No plan yet", "The plan appears once the routes are compared.", "route");
   const p = V.plan, approved = V.approval && V.approval.plan_hash === V.plan_hash_now, voided = V.approval && !approved;
+  const payStep = p.steps.find((s) => s.inputs && s.inputs.amount);  // from the plan itself, so a tampered plan shows its new amount
   const steps = p.steps.map((s) => `<li><span class="pn">${s.n}</span><span>${esc(s.action)}<br><span class="faint mono">${esc(s.tool)}</span></span>${tier(s.tier)}</li>`).join("");
   const plan = `<section class="card">
       <div class="row between"><h2>The plan${info("T0 read · T1 compute and draft · T2 save or share · T3 sandbox payment (PIN + device signature) · T4 never allowed.")}</h2>${approved ? '<span class="badge ok">✓ Signed</span>' : voided ? '<span class="badge deny">Signature void: plan changed</span>' : '<span class="badge muted">Waiting for the parent</span>'}</div>
+      ${payStep ? `<div class="pay-summary"><small>You are approving</small>
+        <b>${esc(money(payStep.inputs.amount, payStep.inputs.currency))} to ${esc((V.invoice.payee || {}).name || payStep.inputs.payee_registry_id)}</b>
+        <span>Account <span class="mono">${esc(((V.invoice.payee || {}).bank || {}).account_masked || "–")}</span> · ${esc(payStep.action.replace(/^Pay in sandbox bank via /, "via "))}</span>
+        <span>Total debit <b class="num">${esc(inr(payStep.inputs.total_inr, true))}</b> including fees and TCS</span></div>` : ""}
       <ul class="plan-steps" style="margin-top:8px">${steps}</ul>
       <h3 style="margin:14px 0 6px">What the parent signs${info("The parent's device signs this hash. Any change to the plan, even one rupee, changes the hash and voids the signature.")}</h3>
       <div class="hashbox">${esc(V.plan_hash_now)}</div>
@@ -550,7 +555,7 @@ function vReceipt() {
       <div class="check-anim"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
       <div class="eyebrow">Step 8 of 8 · Paid in the sandbox</div>
       <div class="big-amount num" style="margin:8px 0">${esc(inr(V.txn.debit_inr))}</div>
-      <p class="muted">${esc(r.inputs_masked.amount)} to ${esc(r.inputs_masked.payee)} via ${esc(r.route)}</p>
+      <p class="muted">${esc(money(V.txn.foreign_amount.value, V.txn.foreign_amount.currency))} to ${esc(r.inputs_masked.payee)} via ${esc(r.route)}</p>
     </section>
     ${receiptDoc(r)}
     <div class="row no-print" style="justify-content:center;margin-top:4px"><button class="btn primary" data-act="print">Print or save as PDF</button>

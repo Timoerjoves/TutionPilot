@@ -302,7 +302,9 @@ class TestAgentFlow(unittest.TestCase):
         used = {u["rule_id"]: u for u in rc["rules_used"]}
         self.assertIn("lrs_pan_mandatory", used)
         self.assertTrue(used["lrs_pan_mandatory"]["source"].startswith("https://www.rbi.org.in/"))
-        self.assertTrue(all(c["ok"] for c in v["draft"]["compliance"]))
+        checks = {c["rule_id"]: c["ok"] for c in v["draft"]["compliance"]}
+        self.assertNotIn(False, checks.values())
+        self.assertIsNone(checks["lrs_form_a2_required"])  # documents not gathered yet: still a to-do
         self.assertTrue((Path(self.tmp.name) / "sandbox_ledger.log").exists())
         with contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(audit.main(["verify", str(Path(self.tmp.name) / "audit_log.jsonl")]), 0)
