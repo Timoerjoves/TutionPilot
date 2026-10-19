@@ -13,7 +13,7 @@
 - [x] 19 Oct: attack-lab traces, inline paste box, printable receipt, RBI compliance checks, Payment-tab fix.
 
 ## Before the final submission (Tue 20, aim for the afternoon)
-- [ ] Merge the 19 Oct work into `main` (judges see `main`).
+- [x] Merged the 19 Oct work into `main`.
 - [ ] Nishanth: record the demo video, up to 5 minutes ([docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)), and add its link to [SUBMISSION.md](SUBMISSION.md).
 - [ ] Rerun the numbers just before sending and update the docs and deck if any changed:
   ```
