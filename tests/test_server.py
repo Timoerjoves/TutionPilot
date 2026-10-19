@@ -1,5 +1,6 @@
 """The web server: static files, the JSON API, and a full payment through HTTP."""
 import base64
+import http.cookiejar
 import json
 import os
 import threading
@@ -21,6 +22,7 @@ class TestServer(unittest.TestCase):
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(Agent()))
         cls.base = f"http://127.0.0.1:{cls.httpd.server_address[1]}"
         threading.Thread(target=cls.httpd.serve_forever, daemon=True).start()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
     def tearDown(self):
         self.httpd.shutdown()
@@ -31,7 +33,7 @@ class TestServer(unittest.TestCase):
                                      data=None if body is None else json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(req) as r:
+            with self.opener.open(req) as r:  # keeps the session cookie, like a browser
                 return r.status, r.headers, r.read()
         except urllib.error.HTTPError as e:
             with e:
@@ -82,7 +84,7 @@ class TestServer(unittest.TestCase):
         self.post(f"/api/session/{sid}/consent", {"accept": True})
         self.post(f"/api/session/{sid}/invoice", {"sample": "valid_us"})
         for field, value in [("remitter_name", "Ravi Parent"), ("pan", fx.SYN_PAN), ("relationship", "Father"),
-                             ("funding", "Own money"), ("prior_inr", "0")]:
+                             ("funding", "Own money"), ("source_of_funds", "Savings"), ("prior_inr", "0")]:
             code, r = self.post(f"/api/session/{sid}/answer", {"field": field, "value": value})
         plan = r["view"]["plan"]
         code, r = self.post(f"/api/session/{sid}/approve", {"pin": "0000", "approval": fx.parent_approval(plan)})
@@ -94,7 +96,7 @@ class TestServer(unittest.TestCase):
         self.assertIsNotNone(r["view"]["receipt"])
         self.assertTrue(r["view"]["audit"]["ok"])
         code, r = self.post(f"/api/session/{sid}/delete")
-        self.assertEqual(self.call("GET", f"/api/session/{sid}")[0], 404)
+        self.assertEqual(self.call("GET", f"/api/session/{sid}")[0], 401)  # deleted, and its cookie is void
 
     def test_cross_site_requests_refused(self):  # risk R20
         def raw(method, headers, body=b"{}"):
@@ -114,8 +116,46 @@ class TestServer(unittest.TestCase):
         self.assertEqual(raw("POST", {**json_ct, "Origin": self.base}), 200)
         self.assertEqual(raw("POST", json_ct), 200)  # no Origin: a script or curl on this computer
 
+    def test_session_needs_its_own_cookie(self):  # risk R25
+        code, headers, data = self.call("POST", "/api/session", {})
+        sid = json.loads(data)["view"]["id"]
+        cookie = headers["Set-Cookie"]
+        for flag in ("tp_session=", "HttpOnly", "SameSite=Strict", "Path=/api"):
+            self.assertIn(flag, cookie)
+        self.assertEqual(self.call("GET", f"/api/session/{sid}")[0], 200)
+        other = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        def as_other(method, path):
+            req = urllib.request.Request(self.base + path, method=method, data=b"{}" if method == "POST" else None,
+                                         headers={"Content-Type": "application/json"})
+            try:
+                with other.open(req) as r:
+                    return r.status, json.loads(r.read())
+            except urllib.error.HTTPError as e:
+                with e:
+                    return e.code, json.loads(e.read())
+        self.assertEqual(as_other("GET", f"/api/session/{sid}")[0], 401)  # the session id alone is not enough
+        self.assertEqual(as_other("POST", f"/api/session/{sid}/consent")[0], 401)
+        own = as_other("POST", "/api/session")[1]["view"]["id"]  # its own session works with its own cookie
+        self.assertEqual(as_other("GET", f"/api/session/{own}")[0], 200)
+        self.assertEqual(self.call("GET", f"/api/session/{own}")[0], 401)  # but not with the first browser's cookie
+
+    def test_idle_session_expires_and_is_deleted(self):
+        agent = Agent()
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(agent, idle_seconds=-1))
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        try:
+            self.base = f"http://127.0.0.1:{httpd.server_address[1]}"
+            sid = self.post("/api/session")[1]["view"]["id"]
+            code, r = self.post(f"/api/session/{sid}/consent", {"accept": True})
+            self.assertEqual(code, 401)
+            self.assertIn("expired", r["error"])
+            self.assertNotIn(sid, agent.sessions)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
     def test_bad_requests(self):
-        self.assertEqual(self.post("/api/session/000000000000/pay")[0], 404)
+        self.assertEqual(self.post("/api/session/000000000000/pay")[0], 401)  # no session cookie: refused first
         code, _, _ = self.call("GET", "/api/sample/../../secrets")
         self.assertEqual(code, 404)
         code, r = self.post("/api/settings", {"pin": "0000", "emergency_stop": True})

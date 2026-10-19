@@ -1,9 +1,9 @@
 # TuitionPilot: technical documentation
 
-Version 0.5, 19 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
+Version 0.6, 20 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (19 Oct 2026):** 249 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
+**At a glance (20 Oct 2026):** 271 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (180 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -133,7 +133,19 @@ The draft has three possible outcomes:
 
 The missing-documents checklist is taken from the corridor. For example, the visa document is the I-20 for the USA and the CAS for the UK, and the loan letter is only asked for when the payment is loan-funded.
 
-### 3.6 Corridors as config
+### 3.6 Payment planning (`rules/planner.py`)
+The agent adapts the plan to the dates and the family's situation; code computes every part:
+- **When to send:** the latest send date is the due date minus the chosen provider's settlement time (sandbox providers: 1 to 3 working days) and one spare working day; weekends are skipped, bank holidays are not modelled. The next action and the assistant use it ("Send by 2026-11-10"); a tight or late date makes the next action urgent.
+- **Financial year:** if the money can be sent on 1 April and still arrive by the due date, the plan compares TCS now with TCS in the new year, when the Rs 10 lakh threshold and the LRS limit start again.
+- **Loan or own money:** TCS on this payment both ways (an education loan from a financial institution has 0% TCS).
+- **Split:** a payment above the per-payment cap is split into payments of at most the cap; one above the year's LRS headroom is split into what fits now and the rest from 1 April, or escalated to the bank (studies above the cap on the university's estimate).
+- **Next fee:** a later fee (for example next semester) is costed after this payment: in the same financial year the threshold is already used; in a new one it starts again.
+
+### 3.7 Student money (`rules/budget.py`) and the payment record
+- **Living-cost budget:** a monthly amount in USD, GBP, CAD or AUD for 1 to 24 months, costed as monthly or quarterly transfers. Each transfer uses the cheapest sandbox route against the year's running total, so TCS follows the threshold exactly; fewer transfers pay the fixed fee fewer times. Living costs are treated as an education remittance (rule `tcs_living_costs_abroad_education_rate`, unverified).
+- **On-time payment record:** every sandbox payment is recorded with its due date, payment date and expected arrival. The record is signed with the sandbox bank's Ed25519 key over canonical JSON, so anyone can check it with the key at `/api/trust`. It is a record of payments, not a credit score.
+
+### 3.8 Corridors as config
 `corridors/in_us.json` and `corridors/in_gb.json` hold destination facts only: currency, purpose code and the student-visa document.
 
 Corridors: India to the USA, UK, Canada and Australia. Adding a destination is a file: The India rule pack is the same for both. New facts in the corridor files are marked `unverified`.
@@ -225,7 +237,7 @@ There is no list of "good" payees. TuitionPilot trusts **one root key** (`data/t
 The agent then pays the signed data, never the printed text. The bank re-checks the certificate before moving money.
 
 **Parent approvals.**
-- **Set-up:** the parent's browser creates an Ed25519 key with WebCrypto. The key cannot be exported and stays in the browser's IndexedDB. Only the public key is registered. The first parent device enrols with the PIN alone; every later device (parent or student) needs the PIN **and** an enrolled parent device's signature over its exact enrolment request (see 4.7).
+- **Set-up:** the parent's browser creates an Ed25519 key with WebCrypto. The key cannot be exported and stays in the browser's IndexedDB. Only the public key is registered. The first parent device enrols with the PIN alone; every later device (parent or student) needs the PIN **and** an enrolled parent device's signature over its exact enrolment request (see 4.9).
 - **Signing:** to approve, the browser recomputes the plan hash from the plan it shows, then signs the approval message (plan id, plan hash, tier, decision, method, time).
 - **Checking:** the policy engine verifies that signature against the registered parent keys before any T3 payment.
 - **Effect:** the agent never holds the parent's key, so it cannot forge an approval or change the plan after signing.
@@ -237,7 +249,14 @@ The agent then pays the signed data, never the printed text. The bank re-checks 
 
 Keys and signatures are base64. A signature always covers `contract.signed_bytes(msg)`: the canonical JSON of the message without its own signature field.
 
-### 4.7 Device sign-in, enrolment and the vault
+### 4.7 Sanctions screening and source of funds
+- **Screening (rule `aml_sanctions_screening`, unverified; RBI KYC Master Direction paras 10(9) and 51):** the remitter, the student and the payee are screened before a plan can be signed. Names are normalised (case, punctuation, word order, legal suffixes). An exact match makes the payment tier T4 (`pay_sanctioned_party`: never allowed); a spelling variant with similarity 0.80 or more is escalated to a bank officer. The list in `data/screening/` is synthetic.
+- **Source of funds (rule `lrs_source_of_funds_declared`, unverified):** asked after "own money or loan" (salary or business income, savings, sale of property or investments, gift from a relative); an education loan is its own source. It is written on the A2-style draft and its compliance checks.
+
+### 4.8 Sessions
+Sign-in sets an HttpOnly, SameSite=Strict cookie with a random 256-bit token bound to that one session. Every `/api/session/...` request must carry it, so the session id in the URL is not enough on its own; a request without the right cookie gets `401` and the browser returns to sign-in. A session idle for 30 minutes is deleted (`session_idle_minutes` in `app/demo_config.json`).
+
+### 4.9 Device sign-in, enrolment and the vault
 
 Each parent or student browser makes two key pairs and keeps the private halves (non-extractable) in IndexedDB: **Ed25519** to sign, **X25519** to unlock vault files. The server stores public keys only (`app/family.py`).
 
@@ -272,10 +291,10 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
 
 **Results on 19 Oct 2026:**
-- 249 tests pass.
+- 271 tests pass.
 - 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
 - The attack lab stops 16 of 16 attacks.
-- The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.
+- The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 180 entries whose chain verifies.
 
 GitHub Actions runs the tests on every push.
 
@@ -296,15 +315,17 @@ GitHub Actions runs the tests on every push.
   - Chooses its **next action** from the session's state (`Agent.next_action`): consent, invoice, one targeted question, hand-over, signature, pay or done, with the reason. After each answer it logs `resumed` with the completed checks it did not repeat; the signature chain runs once per invoice.
   - Asks a question for every missing fact instead of guessing.
   - **Student prepares, parent signs:** a signed-in student can prepare a payment and ask a parent to sign (`Agent.request_parent`). A signed-in parent device opens it (`Agent.take_over`); it moves to a new session id, so the student's old id stops working and a student device can never act as the parent.
-  - Escalates to a human for an unverified payee, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
+  - Escalates to a human for an unverified payee, a missing PAN, a sanctions-list match or near match, being over the LRS cap, being over the per-payment cap, or a corridor mismatch.
   - Changing the route or the plan voids the approval.
   - The receipt records masked inputs, payer and payee (with the signed bank details), FX rate, fee, TCS, every rule used with its version, effective date and source (including the compliance-check rules), the approval, the plan hash, the transaction and the audit head hash at payment. The app shows it as a printable document (company name as a text heading, A4 print CSS) so the browser's Print / Save as PDF gives a clean receipt marked "Sandbox: no real money moved".
 - **Invoices:** file upload or drag-and-drop (PDF, JSON, text), an inline paste box (fallback), synthetic samples, JSON test invoices (`data/invoices/`) or PDF (`agent/pdf.py`, standard library, up to 2 MB, no OCR). An unsigned invoice can be read and explained but never paid.
 - **UI** (`app/static/`): plain HTML, CSS and JavaScript.
-  - **Landing page** (`/`), then **passwordless sign-in** (`/signin`, see 4.7).
+  - **Landing page** (`/`), then **passwordless sign-in** (`/signin`, see 4.9).
   - **Eight guided steps, shown as a bar across the top:** Consent (two consents) → Upload invoice (PDF, JSON or pasted text) → Verify signature (animated chain check) → Questions (one at a time; no PAN stops the payment) → Compare routes (cost-on-top chart, what-if sliders, LRS gauge) → Documents & A2 (draft, RBI compliance checks, missing papers) → Review & sign (PIN pad; the device signs the plan) → Receipt (printable).
-  - **Assistant page** (`/assistant`): answers the next step, due date, signature, documents, markup, TCS and limit questions from the engine and the session.
-  - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent; each result opens a step-by-step trace: the attacker's input, every audit entry the run wrote with its hash, each policy Decision as tier, code and reason, the steps where a defence fired, and the scenario check. `app/lab.py` collects the entries through a tap on the audit log while the run holds the server lock), the **Family vault** (4.8), Settings (cap, emergency stop, device approval) and delete-my-data.
+  - **Assistant page** (`/assistant`): answers the next step, due date, signature, documents, markup, TCS, limit, when to send, loan, split and sanctions questions from the engine and the session; with hosted Claude on, free-form questions too (grounded, see 7).
+  - **Student money page** (`/money`): the living-cost budget and the signed on-time payment record (3.7).
+  - **Your payment plan** on the Compare routes step: send-by date, financial-year timing, loan versus own money, split advice and *Plan the next fee* (3.6).
+  - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent; each result opens a step-by-step trace: the attacker's input, every audit entry the run wrote with its hash, each policy Decision as tier, code and reason, the steps where a defence fired, and the scenario check. `app/lab.py` collects the entries through a tap on the audit log while the run holds the server lock), the **Family vault** (4.9), Settings (cap, emergency stop, device approval) and delete-my-data.
   - Every value is HTML-escaped.
   - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
 
@@ -328,9 +349,10 @@ Two finance questions remain open and need a source before any change:
 
 ## 7. Limits and open items
 - Ten rules are verified against primary text: six tax and limit rules on 18 Oct (RBI Master Direction on LRS; Income-tax Act 2025 s.394, s.397) and four RBI LRS compliance rules on 19 Oct (purpose, PAN, Form A2, above-cap studies). Two still need a bank's confirmation (see the rule pack and risk R1).
-- The model adapter runs offline by default. A hosted Claude model is optional (`TUITIONPILOT_MODEL=claude` with the `anthropic` SDK installed): masked input only, values grounded in the text, wording grounded in the engine, offline fallback on any failure.
+- The model adapter runs offline by default. A hosted Claude model is optional (`TUITIONPILOT_MODEL=claude` with the `anthropic` SDK installed): masked input only, values grounded in the text, wording grounded in the engine, offline fallback on any failure. With it on, free-form questions in the assistant go to Claude with the engine's facts (no personal names, masked); an answer is shown only if every number in it matches the engine, and it is tagged as the model's.
 - Scanned (image-only) PDF invoices can't be read: there is no OCR.
 - One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.
 - The scanner is pattern-based. It is a first line of defence; the policy engine must also refuse on its own.
 - Our Ed25519 code is plain Python: not constant-time and not audited. The demo keys are synthetic.
-- Open web-server items (R21, R22, R25 in the self-assessment): no request timeout, and the session id is a bearer token in `localStorage`. Cross-site requests are refused (R20, fixed 18 Oct).
+- Open web-server items (R21, R22 in the self-assessment): no request timeout. Cross-site requests are refused (R20, fixed 18 Oct); sessions are bound to an HttpOnly cookie with an idle timeout (R25, fixed 20 Oct).
+- The sanctions list is synthetic and name-based (R27); send-by dates skip weekends but not bank holidays.

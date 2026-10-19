@@ -1,6 +1,6 @@
 # Security self-assessment
 
-Version 0.5, 19 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
+Version 0.6, 20 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
 We list what is built, how it is tested, and what is still weak. Nothing here handles real money or real people's data.
 
 ## Summary
@@ -8,9 +8,9 @@ We list what is built, how it is tested, and what is still weak. Nothing here ha
 | | |
 |---|---|
 | **Posture** | Money moves only inside a simulated bank, only through a policy gate, and only with a PIN **and** a signature from the parent's own device over the exact plan. The AI model has no payment tool. |
-| **Evidence (19 Oct)** | 249 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (153 entries) verifies |
-| **Biggest open risks** | R1 two tax rules still need a bank's confirmation · R8 single trust root · R15 un-hardened Ed25519 code · R25 session id as a bearer token |
-| **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. |
+| **Evidence (20 Oct)** | 271 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (180 entries) verifies |
+| **Biggest open risks** | R1 two tax rules still need a bank's confirmation · R8 single trust root · R15 un-hardened Ed25519 code · R27 the sanctions list is synthetic |
+| **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. R25 (Medium): since 20 Oct a session is bound to an HttpOnly cookie and expires after 30 idle minutes. |
 
 Architecture: see [TECHNICAL.md](TECHNICAL.md) section 2 and [architecture.png](architecture.png).
 
@@ -47,7 +47,7 @@ Architecture: see [TECHNICAL.md](TECHNICAL.md) section 2 and [architecture.png](
 | T1 | Compute and draft | None | `rules/`, `rules/explain.py`, `forms/a2.py`: pure functions; they cannot move money or save anything | **Built** |
 | T2 | Save or share drafts | Click | `app/policy.py` requires an approved click | **Built** (no save/share tool in the demo yet) |
 | T3 | Sandbox payment to a signature-verified payee | PIN + parent device signature over `plan_hash` | `app/policy.py` checks the breaker, emergency stop, verified payee, per-payment cap, approval hash, **parent signature**, PIN method, parent role and tier. `app/sandbox.py` re-checks the university's certificate and the quote, and pays once per approval | **Built** |
-| T4 | New/unverified payee, raise or change limits, change own limits, skip approval | Never | `app/policy.py` always denies. Chat requests are flagged by `security.scan()` and passed to the policy as T4 actions | **Built** |
+| T4 | New/unverified payee, a payee or person on the sanctions list, raise or change limits, change own limits, skip approval | Never | `app/policy.py` always denies. Chat requests are flagged by `security.scan()` and passed to the policy as T4 actions | **Built** |
 
 Key properties:
 - **The model has no payment tool.** Only the agent's `pay()` can reach the sandbox, and only through `Policy.check()`.
@@ -96,6 +96,11 @@ Key properties:
 | Encrypted family vault; server stores ciphertext only and hands each device only its own wrapped key | `app/static/app.js: uploadDoc, openDoc`, `app/family.py: put, get_for` | `test_family.py` (server rules); browser round-trip checked 18 Oct |
 | PDF invoices read with size and zip-bomb limits; encrypted and scanned PDFs refused; an unsigned invoice can never be paid | `agent/pdf.py` | `test_pdf.py` |
 | RBI LRS compliance checks (purpose, yearly limit, PAN, Form A2, TCS rule) with sourced, verified rules shown per payment and on the receipt | `rules/engine.py: compliance_checks`, `rulepack/india_lrs_tcs.json` | `test_rules.py: TestCompliance` |
+| Sanctions screening of the remitter, the student and the payee before any plan can be signed: an exact (normalised) name is a T4 stop, a spelling variant goes to a bank officer; synthetic list | `security/screening.py`, `agent/agent.py: _compute`, `app/policy.py: pay_sanctioned_party` | `test_planning.py: TestScreening`, `TestAgentPlanning` |
+| Source-of-funds declaration asked before the plan and written on the A2-style draft and its compliance checks | `agent/agent.py`, `rules/engine.py: compliance_checks` | `test_planning.py` |
+| Sessions bound to an HttpOnly, SameSite=Strict cookie with a random 256-bit token; the session id alone is refused; idle sessions are deleted after 30 minutes | `app/server.py: bind, _session_refused` | `test_server.py: test_session_needs_its_own_cookie, test_idle_session_expires_and_is_deleted` |
+| Hosted-model answers to free-form questions: masked facts only, shown only if every number matches the engine, logged as what the model saw | `agent/agent.py: _facts, _model_answer`, `agent/model.py: HostedModel.answer` | `test_planning.py: TestHostedAnswers` |
+| On-time payment record signed with the sandbox bank's Ed25519 key; any edit breaks it | `app/sandbox.py: statement, verify_statement` | `test_planning.py` |
 | Web server hardening | `app/server.py`, `app/static/app.js` | `test_server.py` |
 | Sourced, versioned rules; unverified rules flagged | `rulepack/`, `rules/engine.py` trace | `test_rules.py` |
 | Refuse dates before a rule took effect | `check_effective` | `test_rules.py` |
@@ -182,8 +187,11 @@ Severity is for a real deployment unless marked "demo".
 | R22 | The sandbox detects duplicates by approval id only. A second, separately signed approval of the same plan could pay twice if `SandboxBank.execute` is called directly | Low | The agent refuses a second payment of the same plan in a session (`agent.pay`) | Record paid plan hashes in the bank and refuse repeats |
 | R23 | `model.explain()` is not routed through `prepare_for_model`. It only ever receives text the engine wrote (no personal data), but it is not logged as "what the model saw" | Low | By design for now | Route it through `prepare_for_model` before connecting a hosted model |
 | R24 | A vault file is locked only to the devices enrolled when it was uploaded. A device enrolled later cannot open older files, and a family that loses every device holding a file's key loses the file | Medium | By design: the server can never unlock a file | Re-share from a device that can open it; add a parent recovery key kept offline |
-| R25 | A session id (48 bits, no expiry) in `localStorage` is the bearer token after sign-in; anyone who copies it acts as that session until sign-out | Medium | Local demo only; sign-out deletes the session on the server | HttpOnly, SameSite cookie with a longer random token and an idle timeout |
+| R25 | ~~A session id in `localStorage` is the bearer token after sign-in.~~ **Fixed 20 Oct:** sign-in sets an HttpOnly, SameSite=Strict cookie holding a random 256-bit token bound to that one session; every `/api/session/...` request must carry it, so a copied session id alone is refused. A session idle for 30 minutes (`session_idle_minutes`) is deleted. Remains: no `Secure` flag, because the demo runs over plain HTTP on this computer | Low (was Medium) | `app/server.py`; `test_server.py` | Add `Secure` when served over HTTPS; rotate the token on privilege change |
 | R26 | For the demo one browser can hold both a parent and a student key, so whoever uses that browser can sign in as either | Low (demo) | Real families enrol separate devices | Enrol each role on its own device; allow one role per browser profile |
+| R27 | The sanctions list is synthetic and matching is name-based only (no dates of birth, no transliteration): a real listed person under a different spelling or script could pass, and a common name could be flagged for review | Medium | Exact normalised names stop the payment (T4); spelling variants (similarity 0.80 or more) go to a bank officer; the rule is marked unverified | Screen against the lists the bank must use, with dates of birth and the bank's own screening service |
+| R28 | The sandbox bank's statement key is derived from a public label, so anyone could sign a fake payment record | Low (demo) | Clearly marked synthetic; the public key is published at `/api/trust` | A real bank signs with a key it keeps in a hardware module |
+| R29 | Hosted-model answers can word facts loosely even when every number checks out (for example, call an estimate exact) | Low | Off by default; facts carry no personal names and are masked; answers are tagged as the model's and logged | Keep keyword answers from code for anything about money movement; review the facts template |
 
 ## 8. Privacy
 - **Synthetic data only:** no real names, PANs, passports or bank details anywhere in the repo. `.gitignore` blocks `private/` and `*.passport.*`.

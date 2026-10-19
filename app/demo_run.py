@@ -15,7 +15,7 @@ from scenarios import fixtures as fx
 OUT = ROOT / "data" / "evidence" / "demo"
 FILES = ("sandbox_ledger.log", "audit_log.jsonl", "model_saw.log", "demo_run.md")
 FAMILY = [("remitter_name", "Ravi Parent (synthetic)"), ("pan", fx.SYN_PAN), ("relationship", "Father"),
-          ("funding", "Own money"), ("prior_inr", "0")]
+          ("funding", "Own money"), ("source_of_funds", "Savings"), ("prior_inr", "0")]
 
 
 def session(a, sample):

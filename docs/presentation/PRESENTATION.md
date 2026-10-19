@@ -14,9 +14,9 @@
 | 6 | **India's LRS and TCS rules** | 0:55 | Six rules verified against RBI and the Income-tax Act 2025; A2 worked: Rs 15 lakh, TCS Rs 10,000 (loan: Rs 0). |
 | 7 | **Route comparison** | 0:55 | B is Rs 4,620 cheaper (rate +6,000, fee -1,500, TCS +120). |
 | 8 | **Signatures instead of payee lists** | 0:55 | University chain; parent device signing; new devices need the PIN and a parent device's approval. |
-| 9 | **Defence in depth** | 0:50 | Tiers T0-T4; masking, grounding, scanner, breaker + emergency stop, audit chain, encrypted vault. |
-| 10 | **Evidence** | 0:45 | 249 tests, 27/27 scenarios, 16/16 attacks stopped, 153 audit entries verify; finance audit of 400 cases. |
-| 11 | **Honest limits, and what comes next** | 0:45 | Two tax rules still need a bank's confirmation; offline AI by default; un-hardened Ed25519; synthetic keys. |
+| 9 | **Defence in depth** | 0:50 | Tiers T0-T4 (T4 includes sanctioned parties); masking, grounding, scanner, breaker + emergency stop, audit chain, encrypted vault; cookie-bound sessions. |
+| 10 | **Evidence** | 0:45 | 271 tests, 27/27 scenarios, 16/16 attacks stopped, 180 audit entries verify; finance audit of 400 cases. |
+| 11 | **Honest limits, and what comes next** | 0:45 | Open rules flagged (incl. the new screening, source-of-funds and living-cost rules); offline AI by default; un-hardened Ed25519; synthetic keys and sanctions list. |
 
 ## Before presenting
 - [ ] Rehearse with a timer: Appendix 2 caps the final presentation at 10 minutes, so aim for 9:30. Speaker notes are written for about 9 minutes.

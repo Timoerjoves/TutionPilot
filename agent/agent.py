@@ -11,7 +11,7 @@ import json
 import re
 import uuid
 from dataclasses import asdict, is_dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal as D, InvalidOperation
 from pathlib import Path
 
@@ -23,9 +23,12 @@ from app.sandbox import IST, BankError, SandboxBank
 from contract import ContractError, landed_cost_result, lrs_result, plan_hash, validate
 from forms import build_a2_draft
 from forms.a2 import CHECKLIST
-from rules import RulePack, YTDTracker, compare_routes, compliance_checks, lrs_headroom
+from rules import SOURCES_OF_FUNDS, RulePack, YTDTracker, compare_routes, compliance_checks, lrs_headroom
+from rules.budget import living_budget
 from rules.explain import explain_comparison, explain_markup, inr, tcs_sentence
+from rules.planner import loan_option, new_year_option, next_fee, plus_working_days, split_options, timing
 from security import Masker, ModelSawLog, ground_or_replace, prepare_for_model, scan
+from security.screening import load as load_watchlist, screen
 from security.pki import TrustStore, verify_approval, split as split_signed
 
 from .model import OfflineModel, _date, json_to_text, make_model
@@ -47,6 +50,8 @@ FAMILY_QUESTIONS = [
     ("relationship", "How is the sender related to the student?", "choice", ["Father", "Mother", "Guardian", "Self"]),
     ("funding", "Is this paid from your own money or from an education loan by a bank or notified institution?",
      "choice", ["Own money", "Education loan"]),
+    ("source_of_funds", "Where does this money come from? Banks ask the sender to declare it.", "choice",
+     list(SOURCES_OF_FUNDS[:-1])),
     ("prior_inr", "How much have you already sent abroad this financial year (since 1 April), in rupees? "
                   "All purposes count. Type 0 if none.", "number", ["0"]),
     ("prior_usd", "And roughly how much is that in US dollars? Type 0 if none.", "number", ["0"]),
@@ -117,6 +122,8 @@ class Agent:
         self.family = Family(self.policy)
         self.sessions = {}
         self.handoffs = {}  # one-time code -> session a student prepared and asked a parent to sign
+        self.watchlist = load_watchlist()  # synthetic sanctions list (security/screening.py)
+        self.records = []  # paid invoices, for the family's signed on-time payment record
 
     # ---------- sessions ----------
     def new_session(self, role="parent"):
@@ -128,7 +135,7 @@ class Agent:
             "answers": {}, "documents": set(), "quotes": [], "chosen_quote_id": None, "ranked": None,
             "plan": None, "plan_seq": 0, "approval": None, "txn": None, "receipt": None,
             "chat": [], "model_saw": [], "flags": [], "escalations": [], "lrs": None, "draft": None,
-            "ytd": YTDTracker(), "prior_used": None, "warnings": [],
+            "ytd": YTDTracker(), "prior_used": None, "warnings": [], "advice": None, "screening": None,
         }
         self.sessions[sid]["signed_in"] = self.sessions[sid]["role"]  # the most this session may act as
         self._log("session_started", {"role": self.sessions[sid]["role"]}, sid)
@@ -221,7 +228,7 @@ class Agent:
         for k, v in {"invoice": None, "uncertain": [], "trust": None, "payee_certificate": None, "quotes": [], "chosen_quote_id": None,
                      "ranked": None, "plan": None, "approval": None, "txn": None, "receipt": None,
                      "flags": [], "escalations": [], "lrs": None, "draft": None,
-                     "warnings": [], "prior_used": None}.items():  # s["ytd"] (payments made) is kept
+                     "warnings": [], "prior_used": None, "advice": None, "screening": None}.items():  # s["ytd"] is kept
             s[k] = v
         # family answers (sender, PAN, funding, earlier remittances) carry over to a new invoice
 
@@ -340,6 +347,11 @@ class Agent:
             act, why = "Pay in the sandbox", "The parent signed this exact plan; the policy gate checks it again before paying."
         else:
             act, why = "Wait for the parent's signature", "A payment is tier T3: it needs the PIN and the parent device's signature of this plan."
+            t = (s.get("advice") or {}).get("timing")
+            if t:
+                if t["status"] != "on_track":
+                    act = "Get the parent's signature today"
+                why += " " + s["advice"]["notes"]["timing"]
         return {"action": act, "why": why, "done": self._done(s)}
 
     def _store_answer(self, s, field, value):
@@ -391,8 +403,14 @@ class Agent:
                 a[field] = "self"
             elif "loan" in value.lower():
                 a[field] = "loan"
+                a["source_of_funds"] = SOURCES_OF_FUNDS[-1]  # the loan is the source; nothing more to declare
             else:
                 return "Please choose 'Own money' or 'Education loan'."
+        elif field == "source_of_funds":
+            pick = next((o for o in SOURCES_OF_FUNDS[:-1] if o.lower() == value.lower()), None)
+            if pick is None:
+                return "Please choose one of: " + "; ".join(SOURCES_OF_FUNDS[:-1]) + "."
+            a[field] = pick
         elif field == "prior_other":
             if value.lower() not in ("yes", "no"):
                 return "Please answer Yes or No."
@@ -440,11 +458,13 @@ class Agent:
             return self.answer(sid, q["field"], text)
         masked = self._to_model(s, "chat", text)
         self._say(s, "user", masked)
-        self._reply(s, masked.lower())
+        self._reply(s, masked)
         return s
 
-    def _reply(self, s, t):
+    def _reply(self, s, masked):
+        t = masked.lower()
         has = lambda *ws: any(w in t for w in ws)
+        adv = s.get("advice") or {}
         inv, trust = s["invoice"], s["trust"]
         if has("next", "what now", "what should", "do now"):
             n = self.next_action(s)
@@ -457,8 +477,35 @@ class Agent:
                       "details are the ones the university signed." if trust["verified"] else
                       f"Not verified: {trust.get('reason') or 'the signature chain failed'}. I will not pay this payee (T4: never).",
                       tone="ok" if trust["verified"] else "deny")
+        elif has("budget", "living cost", "living expense", "rent", "monthly money", "pocket"):
+            self._say(s, "agent", "Open the Student money page: enter the monthly living costs abroad and I'll cost "
+                      "monthly and quarterly transfers, with TCS and the yearly limit.", tone="info")
+        elif has("credit", "payment record", "payment history", "landlord"):
+            n = len(self.records)
+            self._say(s, "agent", f"{n} payment{'' if n == 1 else 's'} on record. The Student money page downloads a "
+                      "record signed by the sandbox bank that anyone can check; it is not a credit score.", tone="info")
         elif s["ranked"] is None:
             self._say(s, "agent", "Upload an invoice first; then I can compare routes and explain every rupee.")
+        elif s["txn"] and has("send by", "when should", "when to pay", "when do i", "late", "arrive", "how long"):
+            rec = next(r for r in reversed(self.records) if r["txn_id"] == s["txn"]["txn_id"])
+            self._say(s, "agent", f"Already paid on {rec['paid_on']}; it should reach the university by {rec['expected_arrival']}, "
+                      f"{'before' if rec['on_time'] else 'after'} the due date {rec['due_on']}.", tone="ok" if rec["on_time"] else "warn")
+        elif adv.get("timing") and has("send by", "when should", "when to pay", "when do i", "late", "arrive", "how long"):
+            self._say(s, "agent", adv["notes"]["timing"], tone="info" if adv["timing"]["status"] == "on_track" else "warn")
+        elif has("april", "new financial year", "next financial year", "wait"):
+            self._say(s, "agent", adv["notes"].get("new_year") or "Waiting for the new financial year isn't possible: the "
+                      "money would not reach the university by the due date.", tone="info")
+        elif has("loan"):
+            self._say(s, "agent", adv["notes"]["loan"] + " This is not tax advice.", tone="info")
+        elif has("split", "too large", "too big", "per-payment cap"):
+            self._say(s, "agent", " ".join(x["text"] for x in adv.get("splits", [])) or
+                      "No split is needed: this payment is within the per-payment cap and the yearly LRS limit.", tone="info")
+        elif has("sanction", "screening", "kyc", "aml", "money laundering"):
+            st = (s.get("screening") or {"status": "clear"})["status"]
+            text = {"clear": "The sender, the student and the university were screened against the sanctions list: no match.",
+                    "possible": "A name is close to a sanctions-list entry, so a bank officer must clear it before payment.",
+                    "match": "A name is on the sanctions list: this payment will not go ahead (T4: never)."}[st]
+            self._say(s, "agent", text + " The list in this demo is synthetic.", tone="ok" if st == "clear" else "deny")
         elif s["draft"] and has("document", "paper", "a2", "form", "checklist"):
             miss = s["draft"]["missing_documents"]
             self._say(s, "agent", ("Still missing: " + "; ".join(miss) + ". Typical list; confirm with your bank.") if miss
@@ -478,8 +525,60 @@ class Agent:
             self._say(s, "agent", f"Your LRS headroom before this payment is about USD {D(l['headroom_before_usd']):,.0f}, "
                       f"and after it USD {D(l['headroom_after_usd']):,.0f}.", tone="info")
         else:
-            self._say(s, "agent", "I can explain the costs ('why'), hidden markup, TCS ('tax'), your yearly limit ('limit'), "
-                      "the documents, the due date or what happens next. A parent approves the plan with the PIN.")
+            answer = self._model_answer(s, masked)
+            if answer:
+                self._say(s, "agent", answer, tone="info", source="model")
+            else:
+                self._say(s, "agent", "I can explain the costs ('why'), hidden markup, TCS ('tax'), your yearly limit ('limit'), "
+                          "when to send, a loan instead of own money, the documents, the due date or what happens next. "
+                          "A parent approves the plan with the PIN.")
+
+    def _facts(self, s):
+        """What the agent knows, as plain sentences for free-form questions, plus the numbers an answer may quote.
+        People's names are left out; the text still goes through masking before any model sees it."""
+        inv, chosen = s["invoice"], self._chosen(s)
+        amt = inv["amount"]
+        lines = [f"Invoice {inv.get('invoice_id')}: {amt['currency']} {D(amt['value']):,.2f} to {inv['payee'].get('name')}, "
+                 f"due {inv.get('due_on')}.",
+                 "The university's signature is " + ("verified." if (s["trust"] or {}).get("verified") else "NOT verified.")]
+        for r in s["ranked"]:
+            parts = [f"{x['label']} {inr(D(x['amount_inr']))}" for x in r["lines"] if x["label"] != "Total"]
+            if r.get("markup"):
+                parts.append(f"hidden FX markup {inr(D(r['markup']['amount_inr']))}")
+            lines.append(f"Route {r['route']} (rank {r['rank']}{', chosen' if r is chosen else ''}): total "
+                         f"{r['total_display']}; " + "; ".join(parts) + ".")
+        lines.append(s["explanation"]["summary"])
+        lrs = s["lrs"]
+        lines.append(f"Yearly LRS limit USD {D(lrs['cap_usd']):,.0f}; left before this payment USD "
+                     f"{D(lrs['headroom_before_usd']):,.0f}, after it USD {D(lrs['headroom_after_usd']):,.0f}.")
+        lines += [v for v in (s.get("advice") or {}).get("notes", {}).values() if v]
+        n = self.next_action(s)
+        lines.append(f"Next step: {n['action']}. {n['why']}")
+        if s["draft"]:
+            lines.append("Documents still missing: " + ("; ".join(s["draft"]["missing_documents"]) or "none") + ".")
+        lines += ["Stopped for a human: " + e["text"] for e in s["escalations"]]
+        results = [{"outputs": jsonable({"ranked": [{"total": r["total_inr"], "lines": [x["amount_inr"] for x in r["lines"]],
+                                                     "markup": (r.get("markup") or {}).get("amount_inr")} for r in s["ranked"]],
+                                         "savings": [str(b["cost"].total_inr - r["cost"].total_inr)
+                                                     for r, b in zip(s["ranked"], s["ranked"][1:])],
+                                         "why": [w["amount_inr"] for w in s["explanation"]["why"]],
+                                         "lrs": lrs, "advice": s.get("advice"), "amount": amt["value"]}),
+                    "trace": chosen["trace"]}]
+        return "\n".join(lines), results
+
+    def _model_answer(self, s, masked_question):
+        """A hosted model answers a free-form question from the facts; every number it writes must check out."""
+        if not getattr(self.model, "answers_questions", False):
+            return None
+        facts, results = self._facts(s)
+        seen = self._to_model(s, "answer_question", f"Facts:\n{facts}\n\nQuestion: {masked_question}")
+        text = self.model.answer(seen)
+        if not text:
+            return None
+        g = ground_or_replace(text, results, "")
+        self._log("tool_call", {"tool": "answer_question", "tier": "T0", "grounded": g["grounded"],
+                                "unsupported": g["unsupported"]}, s["id"])
+        return text if g["grounded"] else None
 
     # ---------- stage 5-7: rules, compare, plan ----------
     def _advance(self, s, ask=True):
@@ -561,6 +660,14 @@ class Agent:
         if s["chosen_quote_id"] not in [q["quote_id"] for q in s["quotes"]]:
             s["chosen_quote_id"] = s["ranked"][0]["quote"]["quote_id"]  # default: cheapest
 
+        # sanctions screening of everyone named on the payment (rule aml_sanctions_screening)
+        self._tool(s, "sanctions_screening")
+        s["screening"] = screen({"remitter": a.get("remitter_name"), "student": (inv.get("student") or {}).get("name"),
+                                 "payee": inv["payee"].get("name")}, self.watchlist)
+        self._log("tool_call", {"tool": "sanctions_screening", "tier": "T0", "status": s["screening"]["status"],
+                                "hits": [{k: h[k] for k in ("role", "entry_id", "status")} for h in s["screening"]["hits"]]},
+                  s["id"])
+
         # escalations: the agent stops and hands over to a human
         reg = s["trust"] or {"verified": False, "mismatch": ["signature"], "reason": "not checked"}
         if not reg["verified"]:
@@ -575,22 +682,35 @@ class Agent:
             s["escalations"].append({"code": "no_pan", "text":
                 "PAN is mandatory for LRS remittances (RBI Master Direction, para 16), so the bank should refuse "
                 "this payment. Add the sender's PAN, or use another sender who has one."})
+        for h in s["screening"]["hits"]:
+            if h["status"] == "match":
+                s["escalations"].append({"code": "sanctions_match", "text":
+                    f"The {h['role']}'s name is on the sanctions list ({h['entry_id']}, {h['list']}). Paying is tier T4: "
+                    "never allowed. The bank must handle it."})
+            else:
+                s["escalations"].append({"code": "sanctions_review", "text":
+                    f"The {h['role']}'s name is close to a sanctions-list entry ({h['entry_id']}, similarity "
+                    f"{h['score']:.0%}). A bank officer must clear it before anyone can sign."})
         if usd > self.policy.per_payment_cap_usd:
             s["escalations"].append({"code": "over_cap", "text":
                 f"USD {usd:,.2f} is above the per-payment cap of USD {self.policy.per_payment_cap_usd:,.0f}. "
                 "A parent must raise the cap in PIN-protected settings, or split the payment."})
 
         chosen = self._chosen(s)
+        s["advice"] = self._advice(s, chosen, lrs, usd, prior_inr, prior_usd, funding, has_pan)
         reg_entry_mismatch = reg["mismatch"] if not reg["verified"] else []
         s["draft"] = build_a2_draft(inv, {"name": a.get("remitter_name"), "pan": a.get("pan") or None,
                                           "relationship": a.get("relationship"), "address": "On file (synthetic)"},
                                     corridor, funding=funding, landed=chosen["cost"], documents=s["documents"],
                                     registry_mismatch=reg_entry_mismatch)
         s["draft"]["sections"]["remitter"]["pan"] = display_pan(a.get("pan"), s["masker"]) or "[no PAN]"
+        s["draft"]["sections"]["remitter"]["source_of_funds"] = a.get("source_of_funds")
         s["draft"]["compliance"] = jsonable(compliance_checks(self.pack, purpose=inv.get("purpose", "education"),
                                                               has_pan=bool(a.get("pan")), within_cap=lrs.within_cap,
                                                               funding=funding, a2_status=s["draft"]["status"]
-                                                              if not s["draft"]["missing_documents"] else "documents"))
+                                                              if not s["draft"]["missing_documents"] else "documents",
+                                                              screening=s["screening"],
+                                                              source_of_funds=a.get("source_of_funds")))
         self._tool(s, "draft_form")
         self._build_plan(s)
         if s["escalations"]:
@@ -601,6 +721,105 @@ class Agent:
             self._say(s, "agent", f"Done. {expl['summary']} The A2-style draft and plan are ready. "
                       "Open 'Compare' to see every rupee, then 'Approve' for the parent's PIN.", tone="ok")
         return s
+
+    def _advice(self, s, chosen, lrs, usd, prior_inr, prior_usd, funding, has_pan):
+        """When to send, whether waiting for 1 April helps, loan versus own money, and how to split: all computed."""
+        inv, today = s["invoice"], self.clock().date()
+        cur, foreign = inv["amount"]["currency"], D(inv["amount"]["value"])
+        settle = self.bank.settle_days(chosen["route"])
+        due = date.fromisoformat(inv["due_on"])
+        route = self.bank.route_of(chosen["quote"])
+        t = timing(due, settle, today)
+        ny = new_year_option(self.pack, route, foreign, due_on=due, settle_days=settle, today=today, prior_inr=prior_inr,
+                             prior_usd=prior_usd, amount_usd=usd, funding=funding, has_pan=has_pan,
+                             mid_market_rate=self.bank.mid_market(cur))
+        loan = loan_option(self.pack, chosen["cost"].remitted_inr, funding=funding, prior_inr=prior_inr, has_pan=has_pan,
+                           on=today)
+        splits = split_options(self.pack, usd, headroom_usd=lrs.headroom_before_usd,
+                               per_payment_cap_usd=self.policy.per_payment_cap_usd)
+        notes = {"timing": {
+            "on_track": f"Send by {t['send_by']} ({t['days_left']} days from today): {chosen['route']} takes about {settle} "
+                        f"working day{'' if settle == 1 else 's'}, plus one spare day, to reach the university by {t['due_on']}.",
+            "tight": f"Send by {t['send_by']}: only {t['days_left']} day{'' if t['days_left'] == 1 else 's'} left for "
+                     f"{chosen['route']} to reach the university by {t['due_on']}.",
+            "late": f"It is too late for {chosen['route']} to arrive by {t['due_on']}: send as soon as the parent signs and "
+                    "tell the university."}[t["status"]]}
+        if ny and ny["tcs_saving_inr"] > 0:
+            notes["new_year"] = (f"If you send on or after {ny['send_from']}, the TCS threshold starts again: TCS "
+                                 f"{inr(ny['tcs_new_year_inr'])} instead of {inr(ny['tcs_now_inr'])}, saving "
+                                 f"{inr(ny['tcs_saving_inr'])}, and the money still arrives by {t['due_on']} "
+                                 f"(assumes {ny['assumes']}).")
+        notes["loan"] = (f"With an education loan from a financial institution, TCS on this payment would be "
+                         f"{inr(loan['tcs_loan_inr'])} instead of {inr(loan['tcs_own_money_inr'])}."
+                         if funding == "self" else
+                         f"Paid from your own money, TCS on this payment would be {inr(loan['tcs_own_money_inr'])} "
+                         f"instead of {inr(loan['tcs_loan_inr'])}.")
+        if splits:
+            notes["split"] = " ".join(x["text"] for x in splits)
+        return jsonable({"timing": t, "new_year": ny, "loan": loan, "splits": splits, "notes": notes})
+
+    def plan_ahead(self, sid, amount, due_on):
+        """Read-only (T1): what a later fee (next semester) will cost after this payment, and whether the
+        financial year, and with it the TCS threshold and the LRS limit, starts again before it."""
+        s = self.get(sid)
+        if not s["ranked"]:
+            raise ValueError("compare routes for this invoice first")
+        foreign, (due, _) = parse_amount(amount), _date(str(due_on or ""))
+        if not foreign or foreign <= 0 or not due:
+            raise ValueError("give the next fee's amount and its due date (YYYY-MM-DD)")
+        if date.fromisoformat(due) <= self.clock().date():
+            raise ValueError("the next fee's due date must be in the future")
+        inv, chosen, a = s["invoice"], self._chosen(s), s["answers"]
+        cur = inv["amount"]["currency"]
+        this_usd, _ = self._amount_usd(inv)
+        next_usd, _ = self._amount_usd({"amount": {"value": str(foreign), "currency": cur}})
+        self._tool(s, "compare_routes")
+        r = next_fee(self.pack, self.bank.routes(cur), foreign, self.bank.mid_market(cur), amount_usd=next_usd,
+                     due_on=date.fromisoformat(due), today=self.clock().date(),
+                     this_payment_inr=chosen["cost"].remitted_inr, this_payment_usd=this_usd,
+                     prior_inr=D(s["prior_used"]["total_inr"]), prior_usd=D(s["prior_used"]["total_usd"]),
+                     funding=a.get("funding", "self"), has_pan=bool(a.get("pan")))
+        r["text"] = (f"{cur} {foreign:,.2f} due {due}: about {inr(r['total_inr'])} via {r['route']}, including TCS of "
+                     f"{inr(r['tcs_inr'])}. " + ("Same financial year as this payment, so the Rs 10 lakh threshold is "
+                     "already used." if r["same_financial_year"] else f"A new financial year ({r['financial_year']}), so "
+                     "the TCS threshold and the LRS limit start again.") +
+                     ("" if r["lrs_within_cap"] else " It would go over the yearly LRS limit."))
+        self._log("tool_call", {"tool": "plan_ahead", "tier": "T1", "same_financial_year": r["same_financial_year"]}, sid)
+        return jsonable(r)
+
+    def budget(self, sid, monthly, months, currency=None):
+        """Read-only (T1): the student's monthly living costs abroad, sent monthly or quarterly."""
+        s = self.get(sid)
+        inv, a = s["invoice"] or {}, s["answers"]
+        cur = (currency or (inv.get("amount") or {}).get("currency") or "USD").upper()
+        if cur not in ("USD", "GBP", "CAD", "AUD"):
+            raise ValueError("currency must be USD, GBP, CAD or AUD")
+        amount, n = parse_amount(monthly), int(months or 0)
+        if amount is None:
+            raise ValueError("give the monthly amount as a number")
+        prior_inr = D(s["prior_used"]["total_inr"]) if s["prior_used"] else D(a.get("prior_inr", "0"))
+        prior_usd = D(s["prior_used"]["total_usd"]) if s["prior_used"] else D(a.get("prior_usd", "0"))
+        if s["ranked"] and not s["txn"]:  # count this invoice too: it is paid before the living money
+            prior_inr += self._chosen(s)["cost"].remitted_inr
+            prior_usd += self._amount_usd(inv)[0]
+        self._tool(s, "compare_routes")
+        r = living_budget(self.pack, self.bank.routes(cur), self.bank.mid_market(cur), amount, n,
+                          usd_per_unit=self.bank.mid_market(cur) / self.bank.mid_market("USD"),
+                          prior_inr=prior_inr, prior_usd=prior_usd, funding="self", has_pan=a.get("pan") != "",
+                          on=self.clock().date())
+        r["currency"] = cur
+        self._log("tool_call", {"tool": "student_budget", "tier": "T1", "months": n, "currency": cur}, sid)
+        return jsonable(r)
+
+    def payment_record(self, sid):
+        """A record of this family's paid invoices, signed by the sandbox bank. Read-only."""
+        s = self.get(sid)
+        student = ((s["invoice"] or {}).get("student") or {}).get("name")
+        payments = [r for r in self.records if not student or r["student"] == student]
+        if not payments:
+            raise ValueError("no payments on record yet")
+        self._log("tool_call", {"tool": "payment_record", "tier": "T0", "payments": len(payments)}, sid)
+        return self.bank.statement({"student": student or "all family payments"}, payments)
 
     def _chosen(self, s):
         return next(r for r in s["ranked"] if r["quote"]["quote_id"] == s["chosen_quote_id"])
@@ -647,7 +866,8 @@ class Agent:
         inv, chosen = s["invoice"], self._chosen(s)
         reg = s["trust"] or {"verified": False}
         s["plan_seq"] += 1
-        pay_tool = "sandbox_pay" if reg["verified"] else "pay_unverified_payee"
+        sanctioned = (s.get("screening") or {}).get("status") == "match"
+        pay_tool = "pay_unverified_payee" if not reg["verified"] else "pay_sanctioned_party" if sanctioned else "sandbox_pay"
         steps = [
             {"n": 1, "action": "Read invoice", "tool": "read_invoice", "tier": "T0",
              "inputs": {"invoice_id": inv.get("invoice_id", "")}},
@@ -658,7 +878,7 @@ class Agent:
             {"n": 4, "action": "Draft A2-style form and checklist", "tool": "draft_form", "tier": "T1",
              "inputs": {"form": "A2-style draft"}},
             {"n": 5, "action": f"Pay in sandbox bank via {chosen['route']}", "tool": pay_tool,
-             "tier": "T3" if reg["verified"] else "T4",
+             "tier": "T3" if pay_tool == "sandbox_pay" else "T4",
              "inputs": {"quote_id": chosen["quote"]["quote_id"], "amount": inv["amount"]["value"],
                         "currency": inv["amount"]["currency"], "payee_registry_id": inv["payee"].get("registry_id", ""),
                         "total_inr": chosen["total_inr"]}},
@@ -873,6 +1093,14 @@ class Agent:
                                                "payee": txn["payee_registry_id"], "plan_hash": txn["plan_hash"]}, sid)
         s["receipt"] = self._receipt(s, entry["hash"])
         self._log("receipt_written", {"receipt_id": s["receipt"]["receipt_id"]}, sid)
+        paid_on = self.clock().date()
+        arrives = plus_working_days(paid_on, self.bank.settle_days(chosen["route"]))
+        self.records.append({"receipt_id": s["receipt"]["receipt_id"], "txn_id": txn["txn_id"],
+                             "invoice_id": inv.get("invoice_id"), "payee": inv["payee"].get("name"),
+                             "amount": f"{inv['amount']['currency']} {inv['amount']['value']}",
+                             "student": (inv.get("student") or {}).get("name"), "due_on": inv.get("due_on"),
+                             "paid_on": paid_on.isoformat(), "expected_arrival": arrives.isoformat(),
+                             "on_time": arrives <= date.fromisoformat(inv["due_on"])})
         self._say(s, "agent", f"Paid in the sandbox: {inr(D(txn['debit_inr']))} debited, transaction {txn['txn_id']}. "
                   "Your decision receipt is ready.", tone="ok")
         return {"ok": True, "txn": txn}
@@ -969,6 +1197,8 @@ class Agent:
             "trust": s["trust"] and {k: v for k, v in s["trust"].items() if k != "certificate"},
             "question": self.pending_question(s), "next": self.next_action(s), "chat": s["chat"], "flags": s["flags"],
             "escalations": s["escalations"], "warnings": s["warnings"], "prior_used": s["prior_used"],
+            "advice": s["advice"], "screening": s["screening"], "records": len(self.records),
+            "answers_questions": bool(getattr(self.model, "answers_questions", False)),
             "ranked": ranked, "chosen_quote_id": s["chosen_quote_id"],
             "explanation": s.get("explanation"), "lrs": s["lrs"], "draft": s["draft"], "plan": s["plan"],
             "plan_hash_now": plan_hash(s["plan"]) if s["plan"] else None,

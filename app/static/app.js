@@ -5,7 +5,8 @@
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let V = null;                         // session view from the server
-let view = location.pathname === "/assistant" ? "assistant" : store.get("tp.view", "welcome");
+const PATH_VIEW = { "/assistant": "assistant", "/money": "money" };  // pages with their own address
+let view = PATH_VIEW[location.pathname] || store.get("tp.view", "welcome");
 let side = store.get("tp.side", "live");
 let busy = false;
 let seenSeq = Number(store.get("tp.seen", "0"));
@@ -27,7 +28,8 @@ const STEPS = [
   { id: "sign", title: "Review & sign", sub: "Parent approves" },
   { id: "receipt", title: "Receipt", sub: "Proof of payment" },
 ];
-const PAGES = ["lab", "vault", "assistant"];  // reachable at any time, outside the 8 steps
+const PAGES = ["lab", "vault", "assistant", "money"];  // reachable at any time, outside the 8 steps
+let nextFee = null, budgetOut = null, recordOut = null;  // results of read-only projections, kept across re-renders
 const SAMPLES = {
   valid_us: ["good", "Genuine invoice", "Northbridge · USA · USD 20,000"],
   valid_uk: ["good", "Genuine invoice", "Eastholm · UK · GBP 12,000"],
@@ -41,7 +43,7 @@ const SAMPLES = {
   revoked_key: ["bad", "Revoked key", "Signed with a leaked old key"],
   unsigned: ["bad", "Unsigned invoice", "No university signature"],
 };
-const QUESTION_ORDER = ["remitter_name", "pan", "relationship", "funding", "prior_inr", "prior_usd", "prior_other"];
+const QUESTION_ORDER = ["remitter_name", "pan", "relationship", "funding", "source_of_funds", "prior_inr", "prior_usd", "prior_other"];
 
 /* ---------- formatting ---------- */
 function inr(v, paise = false) {
@@ -152,12 +154,12 @@ function reachable(id) {
 function go(id, rerender = true) {
   if (!reachable(id)) return;
   view = id;
-  if (id !== "assistant") store.set("tp.view", id);
-  const path = id === "assistant" ? "/assistant" : "/app";  // the assistant has its own address
+  if (!PATH_VIEW["/" + id]) store.set("tp.view", id);
+  const path = PATH_VIEW["/" + id] ? "/" + id : "/app";
   if (location.pathname !== path) history.pushState(null, "", path);
   if (rerender) { render(); $("#stage").focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: "smooth" }); }
 }
-addEventListener("popstate", () => { view = location.pathname === "/assistant" ? "assistant" : store.get("tp.view", "welcome"); render(); });
+addEventListener("popstate", () => { view = PATH_VIEW[location.pathname] || store.get("tp.view", "welcome"); render(); });
 
 /* ---------- render ---------- */
 function render() {
@@ -173,7 +175,7 @@ function render() {
   document.body.classList.toggle("page-mode", PAGES.includes(view));
   $(".shell").classList.toggle("solo", store.get("tp.solo") === "1");
   const views = { welcome: vWelcome, upload: vUpload, verify: vVerify, questions: vQuestions, route: vRoute, documents: vDocuments,
-    sign: vSign, receipt: vReceipt, lab: vLab, vault: vVault, assistant: vAssistant };
+    sign: vSign, receipt: vReceipt, lab: vLab, vault: vVault, assistant: vAssistant, money: vMoney };
   const entering = view !== render.last;  // animate only when moving to another step, not on every update
   render.last = view;
   render.entering = entering;
@@ -371,6 +373,7 @@ function vRoute() {
         ${chosen.markup ? `<div class="callout" style="margin-top:12px">🔎 <b>Hidden markup ${esc(inr(chosen.markup.amount_inr))}</b><br>${esc(chosen.markup.text)}</div>` : ""}</section>
       <section class="card">${gauge()}</section>
     </div>
+    ${planCard()}
     <section class="card whatif">
       <div class="row between"><h2>What if…${info("Change the inputs to see how TCS and each route's total would move. This is read-only: your plan and approval stay as they are.")}</h2><span class="badge info">Plan unchanged</span></div>
       <div class="grid-2" style="margin-top:12px">
@@ -388,6 +391,36 @@ function vRoute() {
         <b class="num">${esc(inr(l.amount_inr))}</b>${l.label !== "Total" ? `<small>${esc(l.text)}</small>` : ""}</li>`).join("")}</ul></div></details>
     <div class="nav-row"><span class="muted small">Not tax advice${info("Tax figures are not tax advice. Rules marked unverified still need checking against RBI and Income Tax Department sources.")}</span>
       <button class="btn primary big" data-go="documents">Documents &amp; A2 form <span class="arrow">→</span></button></div>`;
+}
+
+function planCard() {
+  const a = V.advice;
+  if (!a) return "";
+  const t = a.timing, n = a.notes;
+  const badge = { on_track: "ok", tight: "warn", late: "deny" }[t.status];
+  const row = (k, text, tip) => `<div class="adv"><span class="adv-k">${esc(k)}${tip ? info(tip) : ""}</span><p>${esc(text)}</p></div>`;
+  const nf = nextFee && nextFee.sid === V.id ? nextFee.r : null;
+  const cur = V.invoice.amount.currency;
+  return `<section class="card plan-card">
+      <div class="row between"><h2>Your payment plan${info("Worked out by code from the due date, each provider's settlement time, the financial year and your answers. The agent adapts it when any of them changes.")}</h2>
+        <span class="badge ${badge}">Send by ${esc(t.send_by)}</span></div>
+      <div class="advice">
+        ${row("When to send", n.timing, "Settlement times are the sandbox providers' own (working days, weekends skipped; bank holidays are not modelled), plus one spare day.")}
+        ${n.new_year ? row("Financial year", n.new_year, "The Rs 10 lakh TCS threshold and the USD 2,50,000 LRS limit count per financial year, April to March.") : ""}
+        ${row("Loan or own money", n.loan, "TCS on education is 0% when the money comes from an education loan by a financial institution. Not tax advice.")}
+        ${n.split ? row("Split the payment", n.split) : ""}
+      </div>
+      <form class="next-fee" id="next-fee" autocomplete="off">
+        <h3>Plan the next fee${info("For example next semester's tuition. Read-only: shows what it will cost after this payment, and whether a new financial year starts before it.")}</h3>
+        <div class="row">
+          <label class="field-in"><span>Amount (${esc(cur)})</span><input id="nf-amount" inputmode="decimal" value="${esc(nf ? nf.amount : V.invoice.amount.value)}"></label>
+          <label class="field-in"><span>Due date</span><input id="nf-due" type="date" value="${esc(nf ? nf.due_on : "")}"></label>
+          <button class="btn">Project it</button>
+        </div>
+        ${nf ? `<div class="nf-out"><p><b>${esc(nf.text)}</b></p>
+          <p class="faint tiny">Assumes ${esc(nf.assumes)}. Rates are today's sandbox rates.${nf.needs_verification.length ? ` Unverified: ${esc(nf.needs_verification.join(", "))}.` : ""}</p></div>` : ""}
+      </form>
+    </section>`;
 }
 
 function gauge() {
@@ -527,14 +560,16 @@ function vDocuments() {
 }
 
 /* ---------- assistant (its own page) ---------- */
-const SUGGEST = ["What should I do next?", "Why is this route cheapest?", "How much TCS will I pay?", "How much of my LRS limit is left?",
-  "Is there a hidden markup?", "Which documents do I need?", "When is the invoice due?", "Is the signature genuine?"];
+const SUGGEST = ["What should I do next?", "When should I send it?", "Why is this route cheapest?", "How much TCS will I pay?",
+  "Would a loan help?", "How much of my LRS limit is left?", "Is there a hidden markup?", "Which documents do I need?",
+  "Any sanctions issue?", "Is the signature genuine?"];
 function vAssistant() {
-  const msgs = V.chat.map((m) => `<div class="msg ${esc(m.who)} ${esc(m.tone || "")}">${esc(m.text)}</div>`).join("");
+  const msgs = V.chat.map((m) => `<div class="msg ${esc(m.who)} ${esc(m.tone || "")}">${esc(m.text)}${m.source === "model"
+    ? `<span class="trace">${esc(V.model.split(" ")[0])} · every number checked against the engine</span>` : ""}</div>`).join("");
   const q = V.question;
   return `<section class="card assistant-chat">
       <div class="assistant-head"><span class="orb"></span><div><h1>Assistant</h1>
-        <p class="muted small" style="margin:2px 0 0">Answers from the rules engine and this session${info("The assistant never invents a number: figures come from tested code with a rule id, pack version and source. Text that tries to give it instructions is refused and logged. It sees masked text only.")}</p></div>
+        <p class="muted small" style="margin:2px 0 0">${V.answers_questions ? "Claude answers free-form questions from the engine's facts" : "Answers from the rules engine and this session"}${info("The assistant never invents a number: figures come from tested code with a rule id, pack version and source. With hosted Claude switched on, free-form questions go to Claude with masked facts only, and an answer is shown only if every number in it matches the engine. Text that tries to give it instructions is refused and logged.")}</p></div>
         <span class="spacer"></span><button class="btn sm" data-go="${autoStep()}">Back to the payment</button></div>
       <div class="chatlog" id="chatlog">${msgs || `<div class="empty-chat"><span class="orb big"></span><h2>Ask about <i>your</i> payment.</h2>
         <p>Costs, tax, your yearly limit, documents or what happens next.</p></div>`}</div>
@@ -545,6 +580,44 @@ function vAssistant() {
           <button class="btn primary">Send</button></form>
       </div>
     </section>`;
+}
+
+/* ---------- student money (its own page) ---------- */
+function vMoney() {
+  const cur = V.invoice ? V.invoice.amount.currency : "USD";
+  const b = budgetOut && budgetOut.sid === V.id ? budgetOut.r : null;
+  const rec = recordOut && recordOut.sid === V.id ? recordOut.r : null;
+  const plan = (name, label) => {
+    const p = b.plans[name];
+    return `<tr><td>${label}</td><td class="num">${p.transfers}</td><td class="num">${esc(inr(p.charges_inr))}</td>
+      <td class="num">${esc(inr(p.markup_inr))}</td><td class="num">${esc(inr(p.tcs_inr))}</td><td class="num"><b>${esc(inr(p.total_inr))}</b></td></tr>`;
+  };
+  return `<section class="card hero"><div class="eyebrow">Student money</div>
+      <h1 style="margin:10px 0 8px">Living costs abroad, <i>planned</i>.</h1>
+      <p class="lead">Rent and food every month, in ${esc(cur)} and other currencies, with a record of on-time payments you can show.${info("For the student's life after the tuition is paid: what sending monthly money really costs, and a payment record signed by the bank. Sandbox only.")}</p></section>
+    <div class="money-grid">
+      <section class="card">
+        <h2>Monthly budget${info("Each transfer is costed on the cheapest sandbox route against this year's running total, so TCS follows the Rs 10 lakh threshold exactly. This invoice counts first if it is not paid yet.")}</h2>
+        <form class="row" id="budget" autocomplete="off" style="margin-top:14px;align-items:flex-end">
+          <label class="field-in"><span>Each month</span><input id="bud-monthly" inputmode="decimal" value="${esc(b ? b.monthly_foreign : "1500")}"></label>
+          <label class="field-in"><span>Currency</span><select id="bud-cur">${["USD", "GBP", "CAD", "AUD"].map((c) => `<option ${c === (b ? b.currency : cur) ? "selected" : ""}>${c}</option>`).join("")}</select></label>
+          <label class="field-in"><span>Months</span><input id="bud-months" type="number" min="1" max="24" value="${esc(b ? b.months : 10)}"></label>
+          <button class="btn primary">Cost it</button>
+        </form>
+        ${b ? `<div class="table-scroll"><table class="wf-table" style="margin-top:18px"><thead><tr><th>Send</th><th>Transfers</th><th>Fees</th><th>Hidden markup</th><th>TCS</th><th>Total</th></tr></thead>
+          <tbody>${plan("monthly", "Every month")}${plan("quarterly", "Every quarter")}</tbody></table></div>
+          <div class="callout" style="margin-top:14px"><b>Every quarter saves ${esc(inr(b.saving_quarterly_inr))}</b><br>Fewer transfers pay the fixed fee fewer times; the money sent is the same.</div>
+          <p class="small" style="margin-top:10px"><span class="badge ${b.lrs_within_cap ? "ok" : "deny"}">${b.lrs_within_cap ? "Within the yearly LRS limit" : "Over the yearly LRS limit"}</span>
+            ${b.needs_verification.length ? `<span class="badge warn">unverified: living costs taxed as education</span>${info("Whether a bank treats rent and maintenance as an education remittance needs the bank's confirmation (rule tcs_living_costs_abroad_education_rate).")}` : ""}</p>` : ""}
+      </section>
+      <section class="card">
+        <h2>On-time payment record${info("A list of the family's paid invoices with due dates and expected arrival, signed with the sandbox bank's key. Anyone can check the signature with the bank's public key. It is a record of payments, not a credit score.")}</h2>
+        <p class="muted small" style="margin-top:8px">${V.records} payment${V.records === 1 ? "" : "s"} on record. Useful for a landlord or a lender abroad.</p>
+        ${rec ? `<dl class="kv" style="margin-top:12px"><dt>On time</dt><dd>${rec.on_time_count} of ${rec.payments_count}</dd>
+          <dt>Signed by</dt><dd class="mono">${esc(rec.issuer_key_id)}</dd><dt>Issued</dt><dd>${esc(rec.issued_at)}</dd></dl>` : ""}
+        <button class="btn ${V.records ? "primary" : ""}" data-act="record" style="margin-top:14px" ${V.records ? "" : "disabled"}>Download signed record</button>
+      </section>
+    </div>`;
 }
 
 /* ---------- 8. receipt ---------- */
@@ -973,6 +1046,17 @@ document.addEventListener("click", async (ev) => {
     case "print": return window.print();
     case "sign-out": return signOut();
     case "ask-parent": return act("ask_parent", {}, { advance: false });
+    case "record": {
+      try {
+        const r = (await api("POST", `/api/session/${V.id}/payment_record`, {})).result;
+        recordOut = { sid: V.id, r };
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([JSON.stringify(r, null, 2)], { type: "application/json" })),
+          download: "tuitionpilot-payment-record.json" });
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      } catch (e) { toast(e.message, true); }
+      return render();
+    }
     case "take-over": {
       const r = await act("take_over", { code: t.dataset.code }, { advance: false });
       if (r && r.result.session) { store.set("tp.session", r.result.session); V = (await api("GET", `/api/session/${r.result.session}`)).view; go("sign"); }
@@ -1036,6 +1120,22 @@ document.addEventListener("input", (ev) => {
 });
 document.addEventListener("submit", async (ev) => {
   ev.preventDefault();
+  if (ev.target.id === "next-fee") {
+    try {
+      const body = { amount: $("#nf-amount").value, due_on: $("#nf-due").value };
+      nextFee = { sid: V.id, r: { ...(await api("POST", `/api/session/${V.id}/plan_ahead`, body)).result, amount: body.amount } };
+      render();
+    } catch (e) { toast(e.message, true); }
+    return;
+  }
+  if (ev.target.id === "budget") {
+    try {
+      const body = { monthly: $("#bud-monthly").value, months: Number($("#bud-months").value), currency: $("#bud-cur").value };
+      budgetOut = { sid: V.id, r: (await api("POST", `/api/session/${V.id}/budget`, body)).result };
+      render();
+    } catch (e) { toast(e.message, true); }
+    return;
+  }
   if (ev.target.id === "answer") {
     const v = $("#answer-in").value.trim();
     if (v) act("answer", { field: V.question.field, value: v });

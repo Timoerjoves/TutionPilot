@@ -1,6 +1,6 @@
 {
   "pack_id": "india-lrs-tcs",
-  "version": "2026.10.19-r1",
+  "version": "2026.10.20-r1",
   "jurisdiction": "IN",
   "description": "India outbound education remittances under the Liberalised Remittance Scheme (LRS): annual cap and tax collected at source (TCS). Draft: secondary sources only. Check every rule against RBI and Income Tax Department sources before relying on it.",
   "rules": {
@@ -135,6 +135,30 @@
       "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
       "check_against": "RBI Master Direction - Liberalised Remittance Scheme (updated 6 Sep 2024)",
       "note": "Checked 19 Oct 2026 against the primary text. Master Direction para 7(h): for studies abroad, AD banks may allow amounts exceeding USD 2,50,000 'based on the estimate received from the institution abroad'. TuitionPilot does not apply this itself: a payment above the cap is escalated to the family and their bank."
+    },
+    "aml_sanctions_screening": {
+      "value": true,
+      "effective_from": null,
+      "status": "unverified",
+      "source": "https://rbi.org.in/scripts/bs_viewmasdirections.aspx?id=10292",
+      "check_against": "RBI Master Direction - Know Your Customer (KYC) Direction, 2016, as amended: para 10(9) (customer acceptance) and para 51 (UNSC lists under Section 51A of the UAPA, 1967)",
+      "note": "Seen 20 Oct 2026 on the RBI page (consolidated as on 12 Jul 2018): para 10(9) asks for a system to ensure 'the identity of the customer does not match with any person or entity' on the circulated sanctions lists; para 51 forbids accounts for those on the UNSC lists. Not yet checked against the current amended direction. TuitionPilot screens the remitter, the student and the payee against a SYNTHETIC list (data/screening/watchlist_synthetic.json); a real deployment must use the lists the bank is required to use."
+    },
+    "lrs_source_of_funds_declared": {
+      "value": true,
+      "effective_from": null,
+      "status": "unverified",
+      "source": "https://www.rbi.org.in/scripts/BS_ViewMasterDirections.aspx?id=10192",
+      "check_against": "RBI LRS Master Direction (Form A2 declaration) and the authorised dealer bank's own Form A2 / LRS application",
+      "note": "Banks ask the remitter to declare where the money comes from on the LRS application and Form A2. TuitionPilot records the declaration on the A2-style draft; the exact wording and what proof the bank wants vary by bank. Not yet checked against a primary text."
+    },
+    "tcs_living_costs_abroad_education_rate": {
+      "value": true,
+      "effective_from": null,
+      "status": "unverified",
+      "source": "https://www.incometaxindia.gov.in/w/section-394-6",
+      "check_against": "Income-tax Act 2025 s.394(1), Table Sl. 7-8 (remittance under LRS for the purpose of education)",
+      "note": "The student budget treats money sent for a student's living costs abroad as an education remittance (the self-funded education rate above the threshold). Whether a bank treats rent and maintenance as 'education' or as another LRS purpose, with a different TCS rate, needs a bank's confirmation."
     }
   }
 }

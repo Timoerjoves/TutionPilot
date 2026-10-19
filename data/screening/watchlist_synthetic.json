@@ -1,0 +1,49 @@
+{
+  "name": "Synthetic sanctions watchlist (TuitionPilot demo)",
+  "note": "Invented names only. Not a real sanctions list. A real deployment must screen against the lists the bank is required to use (UNSC lists circulated by RBI, the UAPA list).",
+  "updated_on": "2026-10-20",
+  "entries": [
+    {
+      "id": "SYN-I-0001",
+      "type": "individual",
+      "list": "SYNTHETIC-UNSC-A",
+      "name": "Zarvok Pellinor",
+      "aliases": [
+        "Z. Pellinor",
+        "Zarvok Pelinor"
+      ]
+    },
+    {
+      "id": "SYN-I-0002",
+      "type": "individual",
+      "list": "SYNTHETIC-UAPA",
+      "name": "Ilsa Quorvane",
+      "aliases": []
+    },
+    {
+      "id": "SYN-E-0003",
+      "type": "entity",
+      "list": "SYNTHETIC-UNSC-A",
+      "name": "Ravenmoor Trading FZE",
+      "aliases": [
+        "Ravenmoor Trading"
+      ]
+    },
+    {
+      "id": "SYN-E-0004",
+      "type": "entity",
+      "list": "SYNTHETIC-UNSC-B",
+      "name": "Caspiane Bridge Remit LLC",
+      "aliases": []
+    },
+    {
+      "id": "SYN-E-0005",
+      "type": "entity",
+      "list": "SYNTHETIC-UAPA",
+      "name": "Halvoric Institute of Applied Studies",
+      "aliases": [
+        "Halvoric Institute"
+      ]
+    }
+  ]
+}

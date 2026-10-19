@@ -3,25 +3,36 @@
 Run from the repo root:   python -m app.server            then open http://127.0.0.1:8000
 Standard library only. Listens on 127.0.0.1 (this computer only). Each run writes its sandbox ledger,
 audit log and what-the-model-saw log to data/evidence/runs/<timestamp>/.
+
+Sessions (risk R25): the session id in the URL is not enough on its own. Sign-in sets an HttpOnly, SameSite=Strict
+cookie holding a random token bound to that one session; every /api/session/... request must carry it. A session
+idle for longer than session_idle_minutes is deleted, and the browser is sent back to sign in.
 """
 import argparse
 import json
 import mimetypes
 import os
 import re
+import secrets
 import threading
+import time
+from http.cookies import CookieError, SimpleCookie
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from agent.agent import CONFIG, ROOT, Agent
 from app import lab
+from app.sandbox import STATEMENT_KEY
 
 STATIC = Path(__file__).resolve().parent / "static"
 MAX_BODY = 64 * 1024
 MAX_VAULT_BODY = 4 * 1024 * 1024  # a sealed file or PDF invoice of up to 2 MB, base64-encoded
 mimetypes.add_type("font/woff2", ".woff2")  # not in every platform's table
-PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html", "/assistant": "index.html"}
+PAGES = {"/": "landing.html", "": "landing.html", "/signin": "signin.html", "/app": "index.html", "/assistant": "index.html",
+         "/money": "index.html"}
+COOKIE = "tp_session"
+IDLE_SECONDS = 60 * int(CONFIG.get("session_idle_minutes", 30))
 LOCK = threading.Lock()
 SESSION_ACTIONS = {
     "consent": lambda a, sid, b: a.consent(sid, b.get("accept")),
@@ -45,19 +56,33 @@ READ_ACTIONS = {  # compute only; the session is not changed
     "vault_get": lambda a, sid, b: a.vault_get(sid, b.get("doc_id")),
     "enrol_request": lambda a, sid, b: a.family.enrolment_request(b.get("code")),
     "enrol_approve": lambda a, sid, b: a.approve_device(sid, b.get("code"), b.get("signature")) or {"ok": True},
+    "plan_ahead": lambda a, sid, b: a.plan_ahead(sid, b.get("amount"), b.get("due_on")),
+    "budget": lambda a, sid, b: a.budget(sid, b.get("monthly"), b.get("months"), b.get("currency")),
+    "payment_record": lambda a, sid, b: a.payment_record(sid),
 }
 
 
-def make_handler(agent):
+def make_handler(agent, idle_seconds=IDLE_SECONDS):
+    tokens = {}  # cookie token -> {"sid": session id, "seen": monotonic time of the last request}
+
+    def bind(sid, old=None):
+        """A new random token for this session; the browser keeps it in an HttpOnly cookie."""
+        tokens.pop(old, None)
+        token = secrets.token_urlsafe(32)
+        tokens[token] = {"sid": sid, "seen": time.monotonic()}
+        return {"Set-Cookie": f"{COOKIE}={token}; HttpOnly; SameSite=Strict; Path=/api"}
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "TuitionPilot/1.0"
 
         def log_message(self, fmt, *args):  # keep the console quiet; the audit log is the record
             pass
 
-        def _send(self, code, body, ctype="application/json"):
+        def _send(self, code, body, ctype="application/json", headers=None):
             data = body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
             self.send_response(code)
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")
@@ -72,6 +97,26 @@ def make_handler(agent):
             if n < 0 or n > (MAX_VAULT_BODY if self.path.endswith(("/vault_put", "/invoice")) else MAX_BODY):
                 raise ValueError("request too large")
             return json.loads(self.rfile.read(n) or b"{}") if n else {}
+
+        def _token(self):
+            try:
+                c = SimpleCookie(self.headers.get("Cookie") or "")
+            except CookieError:
+                return None
+            return c[COOKIE].value if COOKIE in c else None
+
+        def _session_refused(self, sid):
+            """Why this request may not use session sid (R25), or None. An idle session is deleted."""
+            t = tokens.get(self._token())
+            if t is None or t["sid"] != sid:
+                return "sign in on this device to use this session"
+            if time.monotonic() - t["seen"] > idle_seconds:
+                tokens.pop(self._token(), None)
+                if sid in agent.sessions:
+                    agent.delete_data(sid)
+                return "the session expired after inactivity: sign in again"
+            t["seen"] = time.monotonic()
+            return None
 
         def _cross_site(self, post=False):
             """Why a request looks cross-site (CSRF, DNS rebinding), or None. Browsers can't send JSON cross-origin
@@ -104,6 +149,8 @@ def make_handler(agent):
                 if ctype.startswith("text/") or ctype.endswith("javascript"):
                     ctype += "; charset=utf-8"
                 return self._send(200, f.read_bytes(), ctype)
+            except PermissionError as e:  # no valid session cookie: the browser must sign in again
+                return self._send(401, {"error": str(e)})
             except KeyError as e:
                 return self._send(404, {"error": str(e).strip("'")})
             except ValueError as e:
@@ -112,6 +159,9 @@ def make_handler(agent):
         def _api_get(self, path):
             m = re.fullmatch(r"/api/session/([0-9a-f]{12})", path)
             if m:
+                why = self._session_refused(m.group(1))
+                if why:
+                    raise PermissionError(why)
                 return {"view": agent.view(m.group(1))}
             m = re.fullmatch(r"/api/sample/([a-z_]+)", path)
             if m:
@@ -126,7 +176,7 @@ def make_handler(agent):
             if path == "/api/devices":  # public keys only: needed to share a vault file with a device
                 return {"devices": agent.family.listing(), "bootstrap": not agent.policy.parent_keys}
             if path == "/api/trust":
-                return {"root": agent.trust.root, "revoked": sorted(agent.trust.revoked)}
+                return {"root": agent.trust.root, "revoked": sorted(agent.trust.revoked), "statement_key": STATEMENT_KEY}
             raise KeyError("not found")
 
         def do_POST(self):
@@ -139,12 +189,12 @@ def make_handler(agent):
                 with LOCK:
                     if path == "/api/session":  # a guest session can only look; acting as the parent needs sign-in
                         s = agent.new_session("student")
-                        return self._send(200, {"view": agent.view(s["id"])})
+                        return self._send(200, {"view": agent.view(s["id"])}, headers=bind(s["id"], self._token()))
                     if path == "/api/auth/challenge":
                         return self._send(200, {"nonce": agent.family.challenge()})
                     if path == "/api/auth/sign_in":
                         s = agent.sign_in(body.get("nonce"), body.get("key_id"), body.get("signature"))
-                        return self._send(200, {"view": agent.view(s["id"])})
+                        return self._send(200, {"view": agent.view(s["id"])}, headers=bind(s["id"], self._token()))
                     if path == "/api/devices/request":  # a new device asks; a signed-in parent device approves
                         code = agent.request_device(body.get("role"), body.get("public_key"), body.get("box_key"),
                                                     body.get("label", "browser"))
@@ -167,7 +217,11 @@ def make_handler(agent):
                     if not m:
                         return self._send(404, {"error": "not found"})
                     sid, action = m.groups()
+                    why = self._session_refused(sid)
+                    if why:
+                        return self._send(401, {"error": why})
                     if action == "delete":
+                        tokens.pop(self._token(), None)
                         return self._send(200, {"result": agent.delete_data(sid)})
                     if action in READ_ACTIONS:
                         return self._send(200, {"result": READ_ACTIONS[action](agent, sid, body)})
@@ -175,7 +229,9 @@ def make_handler(agent):
                         return self._send(404, {"error": "unknown action"})
                     result = SESSION_ACTIONS[action](agent, sid, body)
                     result = result if isinstance(result, dict) and "ok" in result else {"ok": True}
-                    return self._send(200, {"result": result, "view": agent.view(sid)})
+                    moved = action == "take_over" and result.get("session")  # the parent's browser now holds the new session
+                    return self._send(200, {"result": result, "view": agent.view(sid)},
+                                      headers=bind(result["session"], self._token()) if moved else None)
             except KeyError as e:
                 return self._send(404, {"error": str(e).strip("'")})
             except PermissionError as e:

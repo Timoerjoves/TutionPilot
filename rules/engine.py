@@ -228,14 +228,31 @@ def compare_routes(pack, routes, foreign_amount, **kwargs):
 
 # ---------- Compliance checks (RBI LRS Master Direction, Income-tax Act) ----------
 
-def compliance_checks(pack, *, purpose, has_pan, within_cap, funding="self", a2_status=None):
+SOURCES_OF_FUNDS = ("Salary or business income", "Savings", "Sale of property or investments", "Gift from a relative",
+                    "Education loan")
+
+
+def compliance_checks(pack, *, purpose, has_pan, within_cap, funding="self", a2_status=None, screening=None,
+                      source_of_funds=None):
     """Pass/fail list of the regulatory conditions for one education remittance; each item carries its rule trace.
-    ok is True (met), False (not met: the bank should refuse) or None (action needed by the family)."""
+    ok is True (met), False (not met: the bank should refuse) or None (action needed by the family).
+    screening: security.screening result (None = not screened); source_of_funds: the remitter's declaration."""
     def item(rule_id, check, ok, detail):
         return {"rule_id": rule_id, "check": check, "ok": ok, "detail": detail, "trace": pack.trace(rule_id)}
     over = [] if within_cap else [item("lrs_studies_above_cap_on_institution_estimate", "Above the LRS cap for studies",
                                        None, "Only the bank can allow more, on the university's estimate. Escalated.")]
     loan = funding == "loan"
+    aml = []
+    if screening is not None:
+        st = screening["status"]
+        aml.append(item("aml_sanctions_screening", "Sanctions screening of remitter, student and payee",
+                        {"clear": True, "possible": None, "match": False}[st],
+                        "No name matches the sanctions list." if st == "clear"
+                        else "A name is close to a sanctions-list entry: a bank officer must clear it." if st == "possible"
+                        else "A name is on the sanctions list: the payment must not go ahead."))
+    if source_of_funds is not None:
+        aml.append(item("lrs_source_of_funds_declared", "Source of funds declared", bool(source_of_funds) or None,
+                        f"Declared: {source_of_funds}." if source_of_funds else "Declare where the money comes from."))
     return [
         item("lrs_purpose_studies_abroad_permitted", "Purpose is permitted under LRS", purpose == "education",
              "Studies abroad is a permitted current-account purpose." if purpose == "education"
@@ -251,4 +268,5 @@ def compliance_checks(pack, *, purpose, has_pan, within_cap, funding="self", a2_
         item("tcs_rate_education_loan_funded" if loan else "tcs_rate_education_self_funded",
              "TCS on education remittance applied", True,
              "Loan from a financial institution: no TCS." if loan else "2% above Rs 10 lakh in the financial year."),
+        *aml,
     ]

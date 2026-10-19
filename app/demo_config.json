@@ -3,6 +3,7 @@
   "demo_pin": "2468",
   "per_payment_cap_usd": "50000",
   "breaker_threshold": 3,
+  "session_idle_minutes": 30,
   "host": "127.0.0.1",
   "port": 8000
 }

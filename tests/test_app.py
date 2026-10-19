@@ -20,7 +20,7 @@ from security.pki import TrustStore, split
 ROOT = Path(__file__).resolve().parent.parent
 PIN = json.loads((ROOT / "app" / "demo_config.json").read_text(encoding="utf-8"))["demo_pin"]
 FAMILY = [("remitter_name", "Ravi Parent (synthetic)"), ("pan", fx.SYN_PAN), ("relationship", "Father"),
-          ("funding", "Own money"), ("prior_inr", "0")]
+          ("funding", "Own money"), ("source_of_funds", "Savings"), ("prior_inr", "0")]
 
 
 def plan_and_approval(**approval_changes):
@@ -360,7 +360,7 @@ class TestAgentFlow(unittest.TestCase):
     def test_inconsistent_earlier_usd_is_questioned(self):
         self.a.consent(self.sid, True)
         self.a.upload_invoice(self.sid, sample="valid_us")
-        for field, value in FAMILY[:4] + [("prior_inr", "6 lakh")]:
+        for field, value in FAMILY[:5] + [("prior_inr", "6 lakh")]:
             self.a.answer(self.sid, field, value)
         self.a.answer(self.sid, "prior_usd", "0")
         self.assertEqual(self.a.pending_question(self.a.get(self.sid))["field"], "prior_usd")
@@ -379,7 +379,7 @@ class TestAgentFlow(unittest.TestCase):
         self.a.consent(self.sid, True)
         self.a.upload_invoice(self.sid, sample="valid_us")
         for field, value in [("remitter_name", "R"), ("pan", "No PAN"), ("relationship", "Father"),
-                             ("funding", "Own money"), ("prior_inr", "0")]:
+                             ("funding", "Own money"), ("source_of_funds", "Savings"), ("prior_inr", "0")]:
             self.a.answer(self.sid, field, value)
         v = self.a.view(self.sid)
         self.assertIn("no_pan", [e["code"] for e in v["escalations"]])

@@ -127,7 +127,7 @@ def a10():
 # ---------- B: safe execution (sandbox bank and policy engine, through the full agent) ----------
 
 FAMILY = [("remitter_name", "Ravi Parent (synthetic)"), ("pan", fx.SYN_PAN), ("relationship", "Father"),
-          ("funding", "Own money"), ("prior_inr", "0")]
+          ("funding", "Own money"), ("source_of_funds", "Savings"), ("prior_inr", "0")]
 
 
 def ready(sample="valid_us"):

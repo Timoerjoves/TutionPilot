@@ -13,12 +13,12 @@ from contract import ContractError, plan_hash, validate
 from security.pki import b64d, key_id, verify_approval
 
 TOOL_TIERS = {
-    "read_invoice": "T0", "check_payee": "T0", "read_history": "T0",
+    "read_invoice": "T0", "check_payee": "T0", "read_history": "T0", "sanctions_screening": "T0",
     "compare_routes": "T1", "draft_form": "T1",
     "save_draft": "T2", "share_draft": "T2",
     "sandbox_pay": "T3",
     # T4: never allowed from the agent, whatever the approval
-    "add_payee": "T4", "pay_unverified_payee": "T4", "raise_limit": "T4", "change_own_limits": "T4",
+    "add_payee": "T4", "pay_unverified_payee": "T4", "pay_sanctioned_party": "T4", "raise_limit": "T4", "change_own_limits": "T4",
     "skip_approval": "T4",
 }
 MONEY_TIERS = ("T3", "T4")

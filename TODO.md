@@ -11,6 +11,7 @@
 - [x] Security fixes R19 (device enrolment) and R20 (cross-site requests).
 - [x] Repository public; GitHub Actions green.
 - [x] 19 Oct: attack-lab traces, inline paste box, printable receipt, RBI compliance checks, Payment-tab fix.
+- [x] 20 Oct: adaptive payment plan (send-by date, financial-year timing, loan vs own money, split, next fee); Student money page (living-cost budget, bank-signed on-time payment record); sanctions screening and source of funds; cookie-bound sessions with idle timeout (R25 fixed); hosted Claude answers free-form questions, grounded.
 
 ## Before the final submission (Tue 20, aim for the afternoon)
 - [x] Merged the 19 Oct work into `main`.

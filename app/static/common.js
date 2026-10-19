@@ -36,6 +36,10 @@ function canon(v) {  // same bytes as Python json.dumps(sort_keys=True, separato
 async function api(method, path, body) {
   const res = await fetch(path, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && location.pathname !== "/signin") {  // no valid session cookie (expired or another device)
+    store.del("tp.session");
+    location.replace("/signin");
+  }
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }

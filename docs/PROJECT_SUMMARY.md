@@ -72,11 +72,18 @@ Next to the steps, an **Agent, live** panel (which can be hidden) shows every st
 - RBI LRS compliance checks (purpose, yearly limit, PAN, Form A2, TCS rule), each from a verified rule with its source, shown before signing and on the receipt.
 - A printable payment receipt (A4, Print or save as PDF) and an inline paste box for invoice text.
 
-**Numbers (19 Oct 2026):**
-- 249 tests pass.
+**Added on 20 Oct 2026:**
+- **An adaptive payment plan:** when to send (due date and settlement time), whether waiting for the new financial year lowers TCS, loan versus own money, how to split a payment that is too large, and what next semester's fee will cost.
+- **Student money:** a living-cost budget in four currencies (monthly or quarterly transfers) and an on-time payment record signed by the sandbox bank.
+- **KYC/AML:** sanctions screening of the sender, the student and the university (synthetic list), and a source-of-funds declaration on the A2-style draft.
+- **Sessions bound to an HttpOnly cookie** with a 30-minute idle timeout (risk R25, fixed).
+- **Hosted Claude answers free-form questions** when switched on; an answer is shown only if every number in it matches the engine.
+
+**Numbers (20 Oct 2026):**
+- 271 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
-- The demo audit chain has 153 entries and verifies.
+- The demo audit chain has 180 entries and verifies.
 - A finance audit of 400 random cases matched an independent formula.
 
 ## Why it should score well
@@ -85,11 +92,11 @@ Next to the steps, an **Agent, live** panel (which can be hidden) shows every st
 |---|---|---|
 | Task completion | 40% | End-to-end payment: invoice → checks → routes → A2 draft → signed approval → sandbox payment → receipt; 27 scenarios pass |
 | Security & compliance | 30% | Signed invoices and approvals, tiers T0–T4, masking, grounding, audit chain, circuit breaker, emergency stop; sourced rule pack with "unverified" flags; honest self-assessment |
-| Innovation & interaction | 30% | Signatures replace payee lists; India-specific TCS/LRS engine; guided UI with live agent panel, what-if sliders and an attack lab |
+| Innovation & interaction | 30% | Signatures replace payee lists; India-specific TCS/LRS engine; an adaptive payment plan and a student money page (budget, signed payment record); guided UI with live agent panel, what-if sliders, an assistant and an attack lab |
 
 ## Honest limits
 - **Tax rules:** ten verified against RBI and the Income-tax Act 2025 (six on 18 Oct, four RBI LRS compliance rules on 19 Oct); two still need a bank's confirmation, and outputs say so.
-- **The AI step:** an offline stand-in; no hosted model is connected yet.
+- **The AI step:** offline by default; hosted Claude is optional and has not been shown running against the live API in the submitted materials.
 - **Signing code:** our Ed25519 is not hardened, and the demo keys are synthetic.
 
 Full list: [SECURITY_SELF_ASSESSMENT.md](SECURITY_SELF_ASSESSMENT.md).

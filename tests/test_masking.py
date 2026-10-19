@@ -116,7 +116,7 @@ class TestAgentPath(unittest.TestCase):
         while self.a.pending_question(s):  # answer the rest so chat goes to the model, not to a question
             q = self.a.pending_question(s)
             self.a.answer(self.sid, q["field"], {"pan": SYN_PAN, "relationship": "Father", "funding": "Own money",
-                                                 "prior_inr": "0", "prior_other": "No"}.get(q["field"], "0"))
+                                                 "source_of_funds": "Savings", "prior_inr": "0", "prior_other": "No"}.get(q["field"], "0"))
         self.a.chat(self.sid, "Ravi Parent will pay from savings, which route is best?")
         saw = self.a.get(self.sid)["model_saw"]
         chat = [e["text"] for e in saw if e["purpose"] == "chat"]
