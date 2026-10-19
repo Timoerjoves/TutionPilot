@@ -12,13 +12,13 @@ Each item below is one entry of the official submission checklist (PBCSF Appendi
 | 01 | Technical documentation | System architecture, core algorithm description, security design | [docs/TECHNICAL.md](docs/TECHNICAL.md): architecture (section 2, with [diagram](docs/architecture.png)), core algorithms (section 3), security design (section 4) |
 | 02 | Presentation deck | Final presentation no longer than 10 minutes | [TuitionPilot_deck.pptx](docs/presentation/TuitionPilot_deck.pptx) and [PDF](docs/presentation/TuitionPilot_deck.pdf), 11 slides, about 9 minutes, with app screenshots (also in [docs/screenshots/](docs/screenshots/)); outline and timings in [PRESENTATION.md](docs/presentation/PRESENTATION.md) |
 | 03 | Demo video (optional) | No longer than 5 minutes | Script: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md). Video link: *to be added* |
-| 04 | Source code | README, GitHub repository link, deployment instructions, test cases | [README.md](README.md) (quick start: `python -m app.server`, standard library only); 248 tests in [tests/](tests/), run with `python -m unittest discover -s tests -t .`; CI in [.github/workflows/tests.yml](.github/workflows/tests.yml) |
+| 04 | Source code | README, GitHub repository link, deployment instructions, test cases | [README.md](README.md) (quick start: `python -m app.server`, standard library only); 249 tests in [tests/](tests/), run with `python -m unittest discover -s tests -t .`; CI in [.github/workflows/tests.yml](.github/workflows/tests.yml) |
 | 05 | Security self-assessment report | Permission-tier implementation and known-risk list | [docs/SECURITY_SELF_ASSESSMENT.md](docs/SECURITY_SELF_ASSESSMENT.md): tiers T0–T4 (section 3), known risks R1–R26 (section 7) |
 | 06 | Execution evidence | Simulated-account / sandbox operation logs and demo video | [data/evidence/](data/evidence/README.md): sandbox ledger, hash-chained audit log (153 entries, verifies), what-the-model-saw log, 27/27 scenario results; demo video as in 03 |
 
 ## Check it yourself in five minutes
 
-    python -m unittest discover -s tests -t .              # 248 tests
+    python -m unittest discover -s tests -t .              # 249 tests
     python -m scenarios.runner                              # 27 scenarios -> data/evidence/scenario_results.md
     python -m app.demo_run                                  # sandbox run -> data/evidence/demo/
     python -m app.audit verify data/evidence/demo/audit_log.jsonl

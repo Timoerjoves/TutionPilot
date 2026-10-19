@@ -58,7 +58,7 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
 12. Sign in as a **Student** on an approved device: the student can upload the invoice, answer the questions and tap *Ask a parent to sign*. A signed-in parent then sees *Prepared by your student* and opens it on their own device to sign. A student can never sign or pay.
 
 ## Tests and evidence
-    python -m unittest discover -s tests -t . -v      # 248 tests
+    python -m unittest discover -s tests -t . -v      # 249 tests
     python -m scenarios.runner                         # 27 scenarios -> data/evidence/scenario_results.md
     python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log of 153 entries, model log)
     python -m app.audit verify data/evidence/demo/audit_log.jsonl
@@ -103,7 +103,7 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 | `contract/` | Shared message shapes, validation, plan hash |
 | `scenarios/` | The 27-scenario runner and synthetic fixtures |
 | `data/` | Sample messages, signed sample invoices, drag-and-drop test invoices (`data/invoices/upload/`), trust root and certificates (`data/trust/`), evidence |
-| `tests/` | 248 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
+| `tests/` | 249 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
 | `docs/` | Contract, technical docs, security self-assessment, demo script |
 
 ## Licences

@@ -26,7 +26,7 @@
 ## Open decisions
 - [ ] OCR for scanned PDFs and photos: Tesseract run directly (Apache-2.0, local; recommended), pytesseract, or a hosted vision model (sends unmasked images; not advised). Needs the team's OK before adding anything.
 - [ ] Logo: remove the swirl and favicon across the whole app, or only on the receipt (done)?
-- [ ] Missing PAN: the rule pack says PAN is mandatory under LRS, but the app still allows a no-PAN payment at the higher TCS rate. Block it?
+- [x] Missing PAN: a payment without a PAN is now escalated and cannot be signed (rule `lrs_pan_mandatory`); the what-if panel still shows the no-PAN cost.
 - [ ] Slimmer student view (upload, check, send to parent, read-only status, no settings drawer): build or not?
 
 ## Still open in the rules (flagged in every output)

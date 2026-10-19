@@ -29,20 +29,23 @@ Four design rules:
   - T3: sandbox payment, needs the PIN plus the device signature.
   - T4: never. That covers a new or unverified payee, changing limits and skipping approval.
 
-## What the user sees: a guided story in six steps
-1. **Welcome:** two consents before any data is read.
-2. **Invoice:** an animated check of the signature chain, link by link.
-3. **Questions:** one at a time; the agent asks instead of guessing.
-4. **Best route:**
+## What the user sees: eight guided steps
+A landing page and a passwordless sign-in lead into the app, where a bar across the top shows the eight steps:
+1. **Consent:** two consents before any data is read.
+2. **Upload invoice:** a PDF, JSON or pasted text; identifiers are masked first.
+3. **Verify signature:** an animated check of the signature chain, link by link.
+4. **Questions:** one at a time; the agent asks instead of guessing. With no PAN it stops: PAN is mandatory under LRS.
+5. **Compare routes:**
    - a chart of what each route costs on top of the real exchange value;
    - why the winner wins;
    - the hidden markup;
    - an LRS gauge;
    - what-if sliders that change the tax live.
-5. **Review & sign:** a PIN pad; the device recomputes the plan hash and signs.
-6. **Receipt:** the transaction, the university's certificate, the parent's signature and the audit entry.
+6. **Documents & A2:** the A2-style draft, the RBI compliance checks for this payment, and the papers still missing.
+7. **Review & sign:** a PIN pad; the device recomputes the plan hash and signs. A student can only ask a parent to sign.
+8. **Receipt:** a printable receipt with the transaction, the university's certificate, the parent's signature and the audit entry.
 
-Next to the story, an **Agent, live** panel shows every step and policy decision, the rule trace with sources, exactly what the AI saw (masked), and the audit chain. An **Attack lab** runs 16 attacks and shows which defence stopped each one.
+Next to the steps, an **Agent, live** panel (which can be hidden) shows every step and policy decision, the rule trace with sources, exactly what the AI saw (masked), and the audit chain. An **Assistant** page answers questions from the rules engine. An **Attack lab** runs 16 attacks and shows the audit entries where each defence fired.
 
 ## What is built (all in this repository)
 
@@ -70,7 +73,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 - A printable payment receipt (A4, Print or save as PDF) and an inline paste box for invoice text.
 
 **Numbers (19 Oct 2026):**
-- 248 tests pass.
+- 249 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
 - The demo audit chain has 153 entries and verifies.

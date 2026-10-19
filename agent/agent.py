@@ -42,7 +42,7 @@ STAGES = ["Intake", "Mask", "Extract", "Validate", "Rules", "Compare", "Plan", "
 # Questions about the family, asked after the invoice gaps. (field, question, kind, options)
 FAMILY_QUESTIONS = [
     ("remitter_name", "Who is sending the money? (name as on the PAN card)", "text", None),
-    ("pan", "What is the sender's PAN? If there is no PAN, choose 'No PAN' (TCS is then charged at a higher rate).",
+    ("pan", "What is the sender's PAN? PAN is mandatory for LRS payments; if there is none, choose 'No PAN' and the agent will stop.",
      "text", ["No PAN"]),
     ("relationship", "How is the sender related to the student?", "choice", ["Father", "Mother", "Guardian", "Self"]),
     ("funding", "Is this paid from your own money or from an education loan by a bank or notified institution?",
@@ -571,6 +571,10 @@ class Agent:
             s["escalations"].append({"code": "lrs_cap", "text":
                 f"This payment would take you above the LRS limit of USD {lrs.cap_usd:,.0f} for the year "
                 f"(headroom left: USD {lrs.headroom_before_usd:,.0f}). Stopped."})
+        if not a.get("pan"):  # rule lrs_pan_mandatory (RBI LRS Master Direction para 16)
+            s["escalations"].append({"code": "no_pan", "text":
+                "PAN is mandatory for LRS remittances (RBI Master Direction, para 16), so the bank should refuse "
+                "this payment. Add the sender's PAN, or use another sender who has one."})
         if usd > self.policy.per_payment_cap_usd:
             s["escalations"].append({"code": "over_cap", "text":
                 f"USD {usd:,.2f} is above the per-payment cap of USD {self.policy.per_payment_cap_usd:,.0f}. "

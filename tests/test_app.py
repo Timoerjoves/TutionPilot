@@ -375,6 +375,17 @@ class TestAgentFlow(unittest.TestCase):
             self.a.answer(self.sid, field, value)
         self.assertTrue(self.a.view(self.sid)["warnings"])
 
+    def test_no_pan_is_escalated_and_cannot_be_signed(self):  # rule lrs_pan_mandatory
+        self.a.consent(self.sid, True)
+        self.a.upload_invoice(self.sid, sample="valid_us")
+        for field, value in [("remitter_name", "R"), ("pan", "No PAN"), ("relationship", "Father"),
+                             ("funding", "Own money"), ("prior_inr", "0")]:
+            self.a.answer(self.sid, field, value)
+        v = self.a.view(self.sid)
+        self.assertIn("no_pan", [e["code"] for e in v["escalations"]])
+        r = self.a.approve(self.sid, PIN, fx.parent_approval(v["plan"]))
+        self.assertEqual(r["code"], "escalated")
+
     def test_chat_attack_is_denied_and_logged(self):
         self.complete()
         self.a.chat(self.sid, fx.ADMIN_CLAIM)

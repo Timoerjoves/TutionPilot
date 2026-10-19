@@ -81,7 +81,7 @@ class TestServer(unittest.TestCase):
         self.assertEqual(self.post(f"/api/session/{sid}/invoice", {"sample": "valid_us"})[0], 403)  # consent first
         self.post(f"/api/session/{sid}/consent", {"accept": True})
         self.post(f"/api/session/{sid}/invoice", {"sample": "valid_us"})
-        for field, value in [("remitter_name", "Ravi Parent"), ("pan", "No PAN"), ("relationship", "Father"),
+        for field, value in [("remitter_name", "Ravi Parent"), ("pan", fx.SYN_PAN), ("relationship", "Father"),
                              ("funding", "Own money"), ("prior_inr", "0")]:
             code, r = self.post(f"/api/session/{sid}/answer", {"field": field, "value": value})
         plan = r["view"]["plan"]

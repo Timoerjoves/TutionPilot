@@ -3,7 +3,7 @@
 Version 0.5, 19 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (19 Oct 2026):** 248 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
+**At a glance (19 Oct 2026):** 249 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -272,7 +272,7 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
 
 **Results on 19 Oct 2026:**
-- 248 tests pass.
+- 249 tests pass.
 - 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
 - The attack lab stops 16 of 16 attacks.
 - The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.
@@ -302,7 +302,8 @@ GitHub Actions runs the tests on every push.
 - **Invoices:** file upload or drag-and-drop (PDF, JSON, text), an inline paste box (fallback), synthetic samples, JSON test invoices (`data/invoices/`) or PDF (`agent/pdf.py`, standard library, up to 2 MB, no OCR). An unsigned invoice can be read and explained but never paid.
 - **UI** (`app/static/`): plain HTML, CSS and JavaScript.
   - **Landing page** (`/`), then **passwordless sign-in** (`/signin`, see 4.7).
-  - **A guided six-step story:** Welcome (two consents) → Invoice (animated signature-chain check) → Questions (one at a time) → Best route (cost-on-top chart, what-if sliders, LRS gauge) → Review & sign (PIN pad; the device signs the plan) → Receipt.
+  - **Eight guided steps, shown as a bar across the top:** Consent (two consents) → Upload invoice (PDF, JSON or pasted text) → Verify signature (animated chain check) → Questions (one at a time; no PAN stops the payment) → Compare routes (cost-on-top chart, what-if sliders, LRS gauge) → Documents & A2 (draft, RBI compliance checks, missing papers) → Review & sign (PIN pad; the device signs the plan) → Receipt (printable).
+  - **Assistant page** (`/assistant`): answers the next step, due date, signature, documents, markup, TCS and limit questions from the engine and the session.
   - **Beside the story:** an *Agent, live* panel (every step and policy decision, the rule trace with sources, what the AI saw, the audit chain), an **Attack lab** (16 attacks against a separate copy of the agent; each result opens a step-by-step trace: the attacker's input, every audit entry the run wrote with its hash, each policy Decision as tier, code and reason, the steps where a defence fired, and the scenario check. `app/lab.py` collects the entries through a tap on the audit log while the run holds the server lock), the **Family vault** (4.8), Settings (cap, emergency stop, device approval) and delete-my-data.
   - Every value is HTML-escaped.
   - The server sends a strict Content-Security-Policy and listens on 127.0.0.1 only.
