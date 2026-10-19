@@ -36,11 +36,11 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
 ### A two-minute tour
 1. **Sign in** (`/signin`): choose *Parent*, enter the PIN and click *Set up & sign in*. This browser makes its own keys; only the public halves go to the server. Only this first parent device enrols with the PIN alone: any later device (a student's laptop, a second parent phone) shows a code that a signed-in parent approves in ⚙ Settings, then finishes with the PIN.
 2. **Welcome:** switch on both consents, then *Agree and start*.
-3. **Invoice:** pick **Genuine invoice · Northbridge**, or drag a file from `data/invoices/upload/` (four genuine signed invoices, five attacks). Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details. The **Next action** card in the live panel shows what the agent will do next and why.
+3. **Invoice:** pick **Genuine invoice · Northbridge**, or drag a file from `data/invoices/upload/` (four genuine signed invoices, five attacks). You can also paste the invoice text into the box under *Paste text instead*. Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details. The **Next action** card in the live panel shows what the agent will do next and why.
 4. **Questions:** answer one at a time. Use any synthetic PAN, for example `ABCDE1234F`.
 5. **Best route:** see what each route costs on top of the real exchange value, why the cheapest wins, and the LRS limit gauge. Move the **What if…** slider and toggles to see tax change live.
 6. **Review & sign:** enter the PIN; this browser signs the exact plan. Press *Send payment (sandbox)*.
-7. **Receipt:** shows the transaction, the university's certificate, the parent's key and signature, and the audit entry.
+7. **Receipt:** a printable receipt (Print or save as PDF) with payer, university and its signed bank details, FX rate, fee, TCS, every rule used with its source, the transaction and approval ids, and the audit head hash. The *Documents & A2* step before it shows the RBI compliance checks (purpose, LRS limit, PAN, Form A2, TCS rule).
 8. **Try the attacks** with the other samples:
    - *Changed bank details*: the signature breaks.
    - *Look-alike university*: self-made certificate.
@@ -53,12 +53,12 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
    - In the explain panel, use *Tamper (demo)*.
    - In ⚙ Settings, turn on the *Emergency stop*.
 9. **Family vault** (left): add a document; it is encrypted in this browser before upload, for the devices you choose.
-10. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each.
+10. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each. *How it was caught* opens a step-by-step trace: the attacker's input, every audit entry the run wrote, each policy decision (tier, code, reason) and where the defence fired.
 11. **Agent, live** panel: every step and policy decision as it happens, the rule trace with sources, what the AI saw (masked) and the audit chain.
 12. Sign in as a **Student** on an approved device: the student can upload the invoice, answer the questions and tap *Ask a parent to sign*. A signed-in parent then sees *Prepared by your student* and opens it on their own device to sign. A student can never sign or pay.
 
 ## Tests and evidence
-    python -m unittest discover -s tests -t . -v      # 239 tests
+    python -m unittest discover -s tests -t . -v      # 248 tests
     python -m scenarios.runner                         # 27 scenarios -> data/evidence/scenario_results.md
     python -m app.demo_run                             # scripted run -> data/evidence/demo/ (ledger, audit log of 153 entries, model log)
     python -m app.audit verify data/evidence/demo/audit_log.jsonl
@@ -103,7 +103,7 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 | `contract/` | Shared message shapes, validation, plan hash |
 | `scenarios/` | The 27-scenario runner and synthetic fixtures |
 | `data/` | Sample messages, signed sample invoices, drag-and-drop test invoices (`data/invoices/upload/`), trust root and certificates (`data/trust/`), evidence |
-| `tests/` | 239 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
+| `tests/` | 248 unit, finance-audit, contract, signing, attack, PDF, sign-in/vault, app, server and scenario tests |
 | `docs/` | Contract, technical docs, security self-assessment, demo script |
 
 ## Licences

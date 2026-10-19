@@ -1,7 +1,7 @@
 # TuitionPilot: project summary
 
 **2026 Shenzhen FinTechathon · International Track · Topic C (Cross-border & Student Finance)**
-Team: Chandan and Nishanth · Status on 18 Oct 2026: complete, all checks green.
+Team: Chandan and Nishanth · Status on 19 Oct 2026: complete, all checks green.
 
 > Synthetic data only. No real money. Not tax advice. Not RBI-approved.
 
@@ -64,8 +64,13 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 - A visible **Next action**: the agent picks its next step from the session's state, asks one targeted question when a field is missing, and resumes without repeating completed checks.
 - A landing page and a calmer, minimal interface.
 
-**Numbers (18 Oct 2026):**
-- 239 tests pass.
+**Added on 19 Oct 2026:**
+- Attack lab traces: each attack opens a step-by-step timeline of the checks that ran, the policy decisions and the audit entries written.
+- RBI LRS compliance checks (purpose, yearly limit, PAN, Form A2, TCS rule), each from a verified rule with its source, shown before signing and on the receipt.
+- A printable payment receipt (A4, Print or save as PDF) and an inline paste box for invoice text.
+
+**Numbers (19 Oct 2026):**
+- 248 tests pass.
 - 27 of 27 scenarios pass.
 - 16 of 16 attacks are stopped in the lab.
 - The demo audit chain has 153 entries and verifies.
@@ -80,7 +85,7 @@ Next to the story, an **Agent, live** panel shows every step and policy decision
 | Innovation & interaction | 30% | Signatures replace payee lists; India-specific TCS/LRS engine; guided UI with live agent panel, what-if sliders and an attack lab |
 
 ## Honest limits
-- **Tax rules:** six verified against RBI and the Income-tax Act 2025 on 18 Oct; two still need a bank's confirmation, and outputs say so.
+- **Tax rules:** ten verified against RBI and the Income-tax Act 2025 (six on 18 Oct, four RBI LRS compliance rules on 19 Oct); two still need a bank's confirmation, and outputs say so.
 - **The AI step:** an offline stand-in; no hosted model is connected yet.
 - **Signing code:** our Ed25519 is not hardened, and the demo keys are synthetic.
 

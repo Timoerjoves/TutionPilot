@@ -1,9 +1,9 @@
 # TuitionPilot: technical documentation
 
-Version 0.4, 18 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
+Version 0.5, 19 Oct 2026. Official deliverable: system architecture, core algorithm, security design.
 Status marks: **Built** = in the repo with tests; **Planned** = designed, not built yet.
 
-**At a glance (18 Oct 2026):** 239 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
+**At a glance (19 Oct 2026):** 248 tests pass · 27 of 27 scenarios pass · 16 of 16 attacks stopped in the attack lab · the demo audit chain (153 entries) verifies · standard library only, nothing to install.
 
 > Synthetic data only. No real money. Not tax advice. Tax rules marked "unverified" are flagged in every output.
 
@@ -271,8 +271,8 @@ python -m app.server                              # the app at http://127.0.0.1:
 | `test_pdf.py` | PDF text reader: sample PDFs, positions, escapes, embedded fonts, size and zip-bomb limits, encrypted and scanned PDFs refused |
 | `test_masking.py`, `test_markup.py`, `test_route_lines.py`, `test_invoices.py` | Name masking, hidden-markup explainer, per-line route sources, the synthetic invoice set |
 
-**Results on 18 Oct 2026:**
-- 239 tests pass.
+**Results on 19 Oct 2026:**
+- 248 tests pass.
 - 27 of 27 scenarios pass: the 25 team-sheet scenarios plus the signature attacks C8 and C9.
 - The attack lab stops 16 of 16 attacks.
 - The scripted demo run writes a sandbox ledger, a "what the model saw" log and an audit log of 153 entries whose chain verifies.
@@ -326,7 +326,7 @@ Two finance questions remain open and need a source before any change:
 - The ranking includes TCS, which the family can later claim against their income tax.
 
 ## 7. Limits and open items
-- Six tax rules were verified on 18 Oct against the RBI Master Direction and the Income-tax Act 2025 (s.394, s.397); two still need a bank's confirmation (see the rule pack and risk R1).
+- Ten rules are verified against primary text: six tax and limit rules on 18 Oct (RBI Master Direction on LRS; Income-tax Act 2025 s.394, s.397) and four RBI LRS compliance rules on 19 Oct (purpose, PAN, Form A2, above-cap studies). Two still need a bank's confirmation (see the rule pack and risk R1).
 - The model adapter runs offline by default. A hosted Claude model is optional (`TUITIONPILOT_MODEL=claude` with the `anthropic` SDK installed): masked input only, values grounded in the text, wording grounded in the engine, offline fallback on any failure.
 - Scanned (image-only) PDF invoices can't be read: there is no OCR.
 - One shared policy (cap, emergency stop, breaker) for the whole server, which suits a one-family demo.

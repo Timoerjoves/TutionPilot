@@ -1,6 +1,6 @@
 # Security self-assessment
 
-Version 0.4, 18 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
+Version 0.5, 19 Oct 2026. Official deliverable: permission-tier implementation and known-risk list.
 We list what is built, how it is tested, and what is still weak. Nothing here handles real money or real people's data.
 
 ## Summary
@@ -8,7 +8,7 @@ We list what is built, how it is tested, and what is still weak. Nothing here ha
 | | |
 |---|---|
 | **Posture** | Money moves only inside a simulated bank, only through a policy gate, and only with a PIN **and** a signature from the parent's own device over the exact plan. The AI model has no payment tool. |
-| **Evidence (18 Oct)** | 239 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (153 entries) verifies |
+| **Evidence (19 Oct)** | 248 tests pass · 27 of 27 scenarios pass · 8 of 8 unit attack cases pass · the attack lab stops 16 of 16 attacks · the demo audit chain (153 entries) verifies |
 | **Biggest open risks** | R1 two tax rules still need a bank's confirmation · R8 single trust root · R15 un-hardened Ed25519 code · R25 session id as a bearer token |
 | **Fixed this week** | R19 (High): the PIN alone could register a new signing key. Since 18 Oct, a later device also needs a parent device's signature. |
 
@@ -158,7 +158,7 @@ Severity is for a real deployment unless marked "demo".
 
 | # | Risk | Severity | Current state | Mitigation / next step |
 |---|---|---|---|---|
-| R1 | **Tax rules: six verified 18 Oct, two still open.** Verified against primary text: LRS cap (RBI Master Direction), the Rs 10 lakh threshold and its aggregation, 2% for self-funded education, no TCS on an education loan (Income-tax Act 2025 s.394), 5% without PAN (s.397(2)(b)(ii)). Still unverified: earlier other-purpose remittances using up the threshold (the text supports it but does not say it outright), and TCS on the amount sent rather than fees; GST per provider comes from fee schedules; GST on the currency conversion itself is not modelled | Medium (was High) | Every output flags the open rules via `needs_verification`; tests require a primary government source before a rule can be marked verified | A bank's written confirmation for the two open rules |
+| R1 | **Tax rules: six verified 18 Oct (plus four RBI LRS compliance rules on 19 Oct), two still open.** Verified against primary text: LRS cap (RBI Master Direction), the Rs 10 lakh threshold and its aggregation, 2% for self-funded education, no TCS on an education loan (Income-tax Act 2025 s.394), 5% without PAN (s.397(2)(b)(ii)). Still unverified: earlier other-purpose remittances using up the threshold (the text supports it but does not say it outright), and TCS on the amount sent rather than fees; GST per provider comes from fee schedules; GST on the currency conversion itself is not modelled | Medium (was High) | Every output flags the open rules via `needs_verification`; tests require a primary government source before a rule can be marked verified | A bank's written confirmation for the two open rules |
 | R2 | **Names are masked only when labelled or already known.** A name after `Student:`, `Parent:`, `Remitter:` and similar labels is masked, and so is every later mention of a full name. The remitter name the family types is remembered too. A name that first appears in free text, a later mention of a one-word name, and addresses are not | Low | Such a name reaches the model | Mask addresses from form fields; synthetic data only for now |
 | R3 | Scanner is pattern-based: paraphrases, other languages, or images of text can slip past | Medium | First line only | The policy engine denies T4 actions whatever any text says; text never changes tiers, payees or limits |
 | R4 | Scanner false positives (e.g. a genuine "new bank details" notice from a university) | Low | Blocks and asks | A real change of bank account needs a new root-issued certificate, not a message |
