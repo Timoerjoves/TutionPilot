@@ -27,7 +27,8 @@ Four design rules:
   - T1: compute and draft.
   - T2: save or share, needs a click.
   - T3: sandbox payment, needs the PIN plus the device signature.
-  - T4: never. That covers a new or unverified payee, changing limits and skipping approval.
+  - T4: never. That covers a new or unverified payee, a sanctioned party, changing limits and skipping approval.
+- **Plan around the family's dates.** The agent works out when to send, whether waiting for 1 April lowers TCS, loan versus own money, how to split a payment that is too large, and what the next fee will cost; for the student abroad it costs monthly living money and keeps a bank-signed on-time payment record.
 
 ## What the user sees: eight guided steps
 A landing page and a passwordless sign-in lead into the app, where a bar across the top shows the eight steps:

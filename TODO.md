@@ -35,6 +35,9 @@
 - [ ] TCS on the amount sent, not on fees (needs a bank's confirmation).
 - [ ] GST on the currency conversion itself: not modelled; needs a source.
 - [ ] A2 purpose code S0305, I-20 / CAS names, document checklist (unverified).
+- [ ] Sanctions screening (RBI KYC Master Direction paras 10(9) and 51): check against the current amended text; the list itself is synthetic.
+- [ ] Source-of-funds declaration wording on Form A2 (bank-specific).
+- [ ] Living costs abroad taxed at the education TCS rate (needs a bank's confirmation).
 
 ## Nice to have (only if time allows)
 - [ ] Mask names and addresses too (known risk R2).

@@ -29,7 +29,8 @@ security self-assessment (permission tiers and known-risk list), execution evide
 - rulepack/india_lrs_tcs.json: versioned rule pack (Chandan). Never change a rate or rule without a source.
 - rules/engine.py: rules engine (TCS, LRS cap, year-to-date tracker, landed cost, route comparison) (Chandan)
 - rules/explain.py: line-by-line explanations, route "why" breakdown, hidden-markup explainer (Chandan)
-- security/: masking + what-the-model-saw log, untrusted-text scanner, payee_mismatch(), grounding check (Chandan)
+- rules/planner.py: send-by date, financial-year timing, loan vs own money, split advice, next-fee projection; rules/budget.py: student living-cost budget
+- security/: masking + what-the-model-saw log, untrusted-text scanner, payee_mismatch(), grounding check, sanctions screening (screening.py; synthetic list in data/screening/) (Chandan)
 - forms/a2.py: A2-style draft and missing-documents checklist; corridors/*.json: destination config (Chandan)
 - scenarios/runner.py: the 25 team-sheet scenarios + 2 signature attacks; `python -m scenarios.runner` writes data/evidence/scenario_results.* (Chandan)
 - docs/TECHNICAL.md, docs/SECURITY_SELF_ASSESSMENT.md, docs/DEMO_SCRIPT.md (Chandan)
@@ -40,7 +41,7 @@ security self-assessment (permission tiers and known-risk list), execution evide
 - security/ed25519.py, security/pki.py: signatures (RFC 8032, stdlib only); data/trust/: root key, certificates, revocation list;
   python -m security.demo_pki rebuilds the synthetic keys, certificates and signed sample invoices
 - Run the app: python -m app.server (http://127.0.0.1:8000, demo PIN in app/demo_config.json). Evidence logs: python -m app.demo_run
-- tests/: test_rules.py (names match scenario IDs on the team sheet), test_finance_audit.py (property checks), test_contract.py, test_signing.py, test_attacks.py, test_app.py, test_server.py, test_scenarios.py
+- tests/: test_rules.py (names match scenario IDs on the team sheet), test_finance_audit.py (property checks), test_contract.py, test_signing.py, test_attacks.py, test_app.py, test_server.py, test_scenarios.py, test_family.py, test_pdf.py, test_model.py, test_planning.py (planner, budget, screening, signed record, hosted answers)
 - docs/team/: team plan with status (TEAM_PLAN.md), original team sheet, registration email draft
 - docs/PROJECT_SUMMARY.md, TODO.md, docs/presentation/ (deck outline + slide sources)
 

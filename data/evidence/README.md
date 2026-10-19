@@ -7,7 +7,7 @@ Official deliverable: "simulated-account / sandbox operation logs" plus results.
 | `scenario_results.md` / `.json` | The 27 scripted scenarios with expected vs actual result | `python -m scenarios.runner` |
 | `demo/demo_run.md` | Summary of a scripted run: payments, attacks, breaker | `python -m app.demo_run` |
 | `demo/sandbox_ledger.log` | Every sandbox bank transfer (JSON lines) | sandbox bank |
-| `demo/audit_log.jsonl` | Hash-chained audit log of every step and policy decision | audit log |
+| `demo/audit_log.jsonl` | Hash-chained audit log of every step and policy decision, including sanctions screening and planning tool calls | audit log |
 | `demo/model_saw.log` | Exactly what the model saw, after masking | `security.ModelSawLog` |
 
 Check the audit chain yourself:

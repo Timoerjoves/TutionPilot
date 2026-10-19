@@ -16,7 +16,9 @@ An Indian family must pay a university abroad. Today they work out on their own:
 - which papers the bank wants.
 
 TuitionPilot is an agent that reads the invoice, checks the university's digital signature, does those calculations, explains them line by line,
+plans the payment around the due date and the financial year, screens everyone named against a sanctions list,
 drafts the A2-style form, and pays only inside a simulated bank after the parent enters a PIN and the parent's own device signs the exact plan.
+For the student abroad it also costs monthly living money and issues an on-time payment record signed by the bank.
 
 **Design rule: code computes, the model explains.** Every number with a right answer (tax, cost, limits) comes from
 plain, tested Python. The language model only reads documents and puts the engine's results into words, and
@@ -28,7 +30,7 @@ even those words are checked (see 4.3).
 
 Source: [architecture.svg](architecture.svg). How to read it:
 - **Orange (outside the server):** the university, the parent's and student's browsers, and the trust root. Every private key lives here, never on the server.
-- **Blue (agent pipeline):** the steps from invoice to plan. The dashed box is the only step that uses an AI model, and it sees masked text only.
+- **Blue (agent pipeline):** the steps from invoice to plan, including sanctions screening (4), financial-year timing and the budget (5), RBI checks and source of funds (7), and the send-by date, split and loan advice (8). The dashed box is the only step that uses an AI model, and it sees masked text only.
 - **White (guards and shared data):** the scanner, the grounding check, the rule pack and the message contract.
 - **Navy (money path, sandbox only):** policy gate → sandbox bank → audit log and receipt.
 
@@ -36,18 +38,18 @@ Source: [architecture.svg](architecture.svg). How to read it:
 |---|---|---|---|
 | 1 Intake, consent | `app/static/` UI, `agent/agent.py`, `agent/pdf.py` (PDF text, standard library) | Nishanth | Built |
 | 2 Mask | `security/masking.py` | Chandan | Built |
-| 3 Extract | `agent/model.py` (offline deterministic adapter; a hosted model can plug in) | Nishanth | Built |
-| 4 Payee check | `security/pki.py` (trust root → certificate → signed invoice), `security/ed25519.py` | Both | Built |
+| 3 Extract | `agent/model.py` (offline deterministic adapter; hosted Claude opt-in, which also answers free-form questions, grounded) | Nishanth | Built |
+| 4 Payee check | `security/pki.py` (trust root → certificate → signed invoice), `security/ed25519.py`; sanctions screening `security/screening.py` | Both | Built |
 | 5 Rules | `rules/engine.py`, `rulepack/india_lrs_tcs.json` | Chandan | Built |
 | 6 Compare + explain | `rules/engine.py: compare_routes()`, `rules/explain.py` | Chandan | Built |
 | Form | `forms/a2.py`, `corridors/*.json` | Chandan | Built |
 | Untrusted-text scan | `security/guard.py: scan()` | Chandan | Built |
 | Grounding check | `security/grounding.py` | Chandan | Built |
 | Messages between parts | `contract/__init__.py`, `docs/CONTRACT.md` | Both | Built |
-| 7 Plan, questions, escalation | `agent/agent.py` | Nishanth | Built |
+| 7 Plan, questions, escalation | `agent/agent.py`; payment planning `rules/planner.py`; student budget `rules/budget.py` | Nishanth, Chandan | Built |
 | 8 Policy gate | `app/policy.py` (tiers, PIN, cap, emergency stop, circuit breaker) | Nishanth | Built |
 | 9 Approve | `agent/agent.py: approve()`: PIN + parent device signature over the plan hash | Both | Built |
-| 10 Execute | `app/sandbox.py` (quotes, ledger, idempotent payments) | Nishanth | Built |
+| 10 Execute | `app/sandbox.py` (quotes, settlement times, ledger, idempotent payments, signed payment record) | Nishanth | Built |
 | 11 Record | `app/audit.py` (hash chain, verify command), decision receipt | Nishanth | Built |
 | 12 Track | Timeline in the UI | Nishanth | Built |
 

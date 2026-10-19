@@ -5,11 +5,14 @@ An AI agent that helps an Indian family pay university tuition abroad. It:
 - asks one targeted question when something is missing, then resumes without repeating completed checks;
 - works out LRS headroom, TCS and landed cost;
 - compares routes and explains every rupee;
-- drafts an A2-style form;
+- plans the payment: when to send so it arrives by the due date, whether waiting for the new financial year lowers TCS, loan versus own money, how to split a payment that is too large, and what next semester's fee will cost;
+- screens the sender, the student and the university against a sanctions list, and records where the money comes from;
+- drafts an A2-style form with the RBI compliance checks;
 - executes a payment **inside a simulated bank only**, after the parent's device **signs** the exact plan;
+- helps the student abroad: a living-cost budget (monthly or quarterly transfers) and an on-time payment record signed by the bank;
 - keeps family documents in an **encrypted vault** the server cannot read.
 
-Parents and students sign in **without passwords**: each device signs a one-time challenge with a key that never leaves the browser.
+Parents and students sign in **without passwords**: each device signs a one-time challenge with a key that never leaves the browser, and the session lives in an HttpOnly cookie that ends after 30 idle minutes.
 
 2026 Shenzhen FinTechathon, International Track, Topic C (Cross-border & Student Finance). Team: Chandan, Nishanth.
 
@@ -35,8 +38,8 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
 
 ### A two-minute tour
 1. **Sign in** (`/signin`): choose *Parent*, enter the PIN and click *Set up & sign in*. This browser makes its own keys; only the public halves go to the server. Only this first parent device enrols with the PIN alone: any later device (a student's laptop, a second parent phone) shows a code that a signed-in parent approves in ⚙ Settings, then finishes with the PIN.
-2. **Welcome:** switch on both consents, then *Agree and start*.
-3. **Invoice:** pick **Genuine invoice · Northbridge**, or drag a file from `data/invoices/upload/` (four genuine signed invoices, five attacks). You can also paste the invoice text into the box under *Paste text instead*. Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details. The **Next action** card in the live panel shows what the agent will do next and why.
+2. **Consent:** switch on both consents, then *Agree and start*.
+3. **Upload invoice, then Verify signature:** pick **Genuine invoice · Northbridge**, or drag a file from `data/invoices/upload/` (four genuine signed invoices, five attacks). You can also paste the invoice text into the box under *Paste text instead*. Watch the signature chain check each link: trust root → university certificate → invoice signature → bank details. The **Next action** card in the live panel shows what the agent will do next and why.
 4. **Questions:** answer one at a time. Use any synthetic PAN, for example `ABCDE1234F`, and say where the money comes from. Everyone named is screened against a (synthetic) sanctions list: type the sender's name as `Zarvok Pellinor` to see the payment stop.
 5. **Compare routes:** see what each route costs on top of the real exchange value, why the cheapest wins, and the LRS limit gauge. **Your payment plan** says when to send (from the due date and the provider's settlement time), whether waiting for 1 April lowers TCS, what a loan would change and how to split a payment that is too large; *Plan the next fee* costs next semester's tuition. Move the **What if…** slider and toggles to see tax change live.
 6. **Review & sign:** enter the PIN; this browser signs the exact plan. Press *Send payment (sandbox)*.
