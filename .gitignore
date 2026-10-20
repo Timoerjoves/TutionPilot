@@ -13,3 +13,6 @@ data/evidence/runs/
 
 # Claude Code local tooling
 .claude/
+
+# submission package built by tools/make_submission.py
+submission/
