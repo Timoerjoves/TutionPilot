@@ -2,10 +2,9 @@
 
 | Document | What it is |
 |---|---|
-| [../SUBMISSION.md](../SUBMISSION.md) | **Start here:** the six official deliverables (Appendix 2) and where each one is |
+| [../submission/TuitionPilot_00_Submission_Index.md](../submission/TuitionPilot_00_Submission_Index.md) | **Start here:** the six official deliverables as submitted (PDFs, deck, video link, evidence) |
 | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | One-page idea summary: problem, idea, what is built, why it scores, limits |
 | [team/TEAM_PLAN.md](team/TEAM_PLAN.md) | Team plan (Plan v2) with owners, dues and status (updated 19 Oct); scenarios; official deliverables |
-| [../TODO.md](../TODO.md) | What is left before the first and final submission |
 | [presentation/PRESENTATION.md](presentation/PRESENTATION.md) | The judges' 11-slide deck (PPTX and PDF), outline and timings |
 | [TECHNICAL.md](TECHNICAL.md) | Technical documentation: architecture, algorithms, security design, finance audit (official deliverable) |
 | [architecture.png](architecture.png) / [architecture.svg](architecture.svg) | The architecture diagram used in the technical documentation and the deck |

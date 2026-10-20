@@ -20,9 +20,7 @@ Parents and students sign in **without passwords**: each device signs a one-time
 
 **Start here:**
 - **Judges: [the submission folder](submission/TuitionPilot_00_Submission_Index.md)**, every deliverable as a PDF, deck and evidence, in one place, and the [demo video](https://drive.google.com/file/d/1fHZ_CLmVwT3-i_xDXy14E2ADuA9uPnxF/view?usp=sharing).
-- [Submission index](SUBMISSION.md): the six official deliverables and where each one is.
 - [Project summary](docs/PROJECT_SUMMARY.md): the idea on one page.
-- [To do](TODO.md): what is left before submission.
 - [Team plan and status](docs/team/TEAM_PLAN.md).
 - [Presentation](docs/presentation/PRESENTATION.md).
 - [All documents](docs/README.md).

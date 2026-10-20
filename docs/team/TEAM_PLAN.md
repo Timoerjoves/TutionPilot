@@ -6,7 +6,7 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 - **First complete submission:** Sun 18 Oct night.
 - **Scoring:** task completion 40%, security & compliance 30%, innovation & interaction 30%.
 
-> Note for Nishanth: on 16–17 Oct Chandan built first versions of the items in your area as well (agent, sandbox bank, policy engine, audit log, UI, README, CI), so the team has a complete draft. Please review them and change anything you planned differently. See [../../TODO.md](../../TODO.md).
+> Note for Nishanth: on 16–17 Oct Chandan built first versions of the items in your area as well (agent, sandbox bank, policy engine, audit log, UI, README, CI), so the team has a complete draft. Please review them and change anything you planned differently.
 
 ## Plan v2 items
 

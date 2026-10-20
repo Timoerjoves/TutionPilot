@@ -43,7 +43,7 @@ security self-assessment (permission tiers and known-risk list), execution evide
 - Run the app: python -m app.server (http://127.0.0.1:8000, demo PIN in app/demo_config.json). Evidence logs: python -m app.demo_run
 - tests/: test_rules.py (names match scenario IDs on the team sheet), test_finance_audit.py (property checks), test_contract.py, test_signing.py, test_attacks.py, test_app.py, test_server.py, test_scenarios.py, test_family.py, test_pdf.py, test_model.py, test_planning.py (planner, budget, screening, signed record, hosted answers)
 - docs/team/: team plan with status (TEAM_PLAN.md), original team sheet, registration email draft
-- docs/PROJECT_SUMMARY.md, TODO.md, docs/presentation/ (deck outline + slide sources)
+- docs/PROJECT_SUMMARY.md, docs/presentation/ (deck and outline), submission/ (the deliverables as sent; python tools/make_submission.py)
 
 ## Run the tests (from the repo root)
 python -m unittest discover -s tests -t . -v

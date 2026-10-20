@@ -104,6 +104,6 @@ Full list: [SECURITY_SELF_ASSESSMENT.md](SECURITY_SELF_ASSESSMENT.md).
 
 ## Where to go next
 - **Try it:** `python -m app.server`, then open http://127.0.0.1:8000 (see the [README](../README.md)).
-- **What is left:** [TODO.md](../TODO.md).
+- **The submission:** [submission/TuitionPilot_00_Submission_Index.md](../submission/TuitionPilot_00_Submission_Index.md).
 - **Team plan and status:** [team/TEAM_PLAN.md](team/TEAM_PLAN.md).
 - **Presentation:** [presentation/PRESENTATION.md](presentation/PRESENTATION.md).
