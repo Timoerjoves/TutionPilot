@@ -6,6 +6,7 @@ Team: Chandan, Nishanth · Repository: https://github.com/Timoerjoves/TutionPilo
 > Synthetic data only. No real money: payments run in a sandbox bank. Not tax advice. Not RBI-approved.
 
 Each item below is one entry of the official submission checklist (PBCSF Appendix 2).
+The files as sent (PDFs, deck, evidence, team name in every file name) are in [submission/](submission/TuitionPilot_00_Submission_Index.md).
 
 | # | Deliverable (Appendix 2) | What is required | Where |
 |---|---|---|---|

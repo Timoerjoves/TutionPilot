@@ -19,6 +19,7 @@ Parents and students sign in **without passwords**: each device signs a one-time
 > Synthetic data only. No real money. Not tax advice. Not RBI-approved. Tax rules marked "unverified" are flagged in every output.
 
 **Start here:**
+- **Judges: [the submission folder](submission/TuitionPilot_00_Submission_Index.md)**, every deliverable as a PDF, deck and evidence, in one place.
 - [Submission index](SUBMISSION.md): the six official deliverables and where each one is.
 - [Project summary](docs/PROJECT_SUMMARY.md): the idea on one page.
 - [To do](TODO.md): what is left before submission.

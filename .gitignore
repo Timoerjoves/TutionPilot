@@ -15,4 +15,4 @@ data/evidence/runs/
 .claude/
 
 # submission package built by tools/make_submission.py
-submission/
+submission_build/
