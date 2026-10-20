@@ -41,13 +41,13 @@ The source is the team sheet "Plan v2" (`TuitionPilot_Gap_Analysis_and_Plan_v3.x
 | 27 | Innovation | Student and parent role switch | Nishanth | Mon 19 | ✅ Done as separate devices: the student prepares, a parent device signs | sign-in, handoff |
 | 28 | Innovation | Loan versus savings scenarios | Chandan | Mon 19 | ✅ Done: TCS both ways from verified rules, in the payment plan | `rules/planner.py: loan_option` |
 | 29 | Innovation | FX timing advice | Chandan | Mon 19 | ✅ Done as date timing, not rate forecasts: send-by date and financial-year timing | `rules/planner.py` |
-| 30 | Deliverables | Registration email with form and watermarked passport pages | Chandan | Fri 16 | ✅ Sent; confirmed by the organisers on 19 Oct | `REGISTRATION_EMAIL.md` |
+| 30 | Deliverables | Registration email with form and watermarked passport pages | Chandan | Fri 16 | ✅ Sent; confirmed by the organisers on 19 Oct | |
 | 31 | Deliverables | Repo skeleton, tooling, folders | Nishanth | Fri 16 | ✅ Done | whole repo |
 | 32 | Deliverables | Interface contract | Both | Fri 16 | ✅ Done, now **v1.1** with signatures | `docs/CONTRACT.md` |
 | 33 | Deliverables | Technical documentation | Chandan | Sun 18 | ✅ v0.6 | `docs/TECHNICAL.md` |
 | 34 | Deliverables | README, deployment instructions, one-command test run | Nishanth | Sun 18 | ✅ First version | `README.md` |
 | 35 | Deliverables | Presentation deck, 10 minutes or less | Chandan | Mon 19 | ✅ 11 slides, about 9 minutes, PPTX and PDF, screenshots of the current app | `docs/presentation/` |
-| 36 | Deliverables | Demo video, 3–5 minutes | Nishanth | Mon 19 | ⏳ To do: record (script ready) | `docs/DEMO_SCRIPT.md` |
+| 36 | Deliverables | Demo video, 3–5 minutes | Nishanth | Mon 19 | ✅ Recorded | [video](https://drive.google.com/file/d/1fHZ_CLmVwT3-i_xDXy14E2ADuA9uPnxF/view?usp=sharing), `docs/DEMO_SCRIPT.md` |
 | 37 | Deliverables | Execution evidence pack | Chandan | Mon 19 | ✅ Done | `data/evidence/` |
 | 38 | Deliverables | First complete submission by Sun 18 night | Chandan | Sun 18 | ⏳ To do | |
 | 39 | Deliverables | Final check and final submission | Both | Tue 20 | ⏳ To do | |
@@ -85,7 +85,7 @@ All 27 pass (`python -m scenarios.runner` → `data/evidence/scenario_results.md
 |---|---|---|
 | Technical documentation | v0.6 | `docs/TECHNICAL.md` |
 | Presentation deck (≤ 10 min) | 11 slides, PPTX and PDF | `docs/presentation/` |
-| Demo video (optional, ≤ 5 min) | Script ready, not recorded | `docs/DEMO_SCRIPT.md` |
+| Demo video (optional, ≤ 5 min) | Recorded | [video](https://drive.google.com/file/d/1fHZ_CLmVwT3-i_xDXy14E2ADuA9uPnxF/view?usp=sharing) |
 | Source code with README and tests | Ready | this repo |
 | Security self-assessment | v0.6 | `docs/SECURITY_SELF_ASSESSMENT.md` |
 | Execution evidence | Ready | `data/evidence/` |

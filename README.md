@@ -19,7 +19,7 @@ Parents and students sign in **without passwords**: each device signs a one-time
 > Synthetic data only. No real money. Not tax advice. Not RBI-approved. Tax rules marked "unverified" are flagged in every output.
 
 **Start here:**
-- **Judges: [the submission folder](submission/TuitionPilot_00_Submission_Index.md)**, every deliverable as a PDF, deck and evidence, in one place.
+- **Judges: [the submission folder](submission/TuitionPilot_00_Submission_Index.md)**, every deliverable as a PDF, deck and evidence, in one place, and the [demo video](https://drive.google.com/file/d/1fHZ_CLmVwT3-i_xDXy14E2ADuA9uPnxF/view?usp=sharing).
 - [Submission index](SUBMISSION.md): the six official deliverables and where each one is.
 - [Project summary](docs/PROJECT_SUMMARY.md): the idea on one page.
 - [To do](TODO.md): what is left before submission.
@@ -56,8 +56,8 @@ Then open **http://127.0.0.1:8000** (landing page) or go straight to **/signin**
    - On the sign screen, use *Tamper with the plan*.
    - In the explain panel, use *Tamper (demo)*.
    - In ⚙ Settings, turn on the *Emergency stop*.
-9. **Family vault** (left): add a document; it is encrypted in this browser before upload, for the devices you choose.
-10. **Attack lab** (left, under the steps): run all 16 attacks against a separate copy of the agent and see which defence stopped each. *How it was caught* opens a step-by-step trace: the attacker's input, every audit entry the run wrote, each policy decision (tier, code, reason) and where the defence fired.
+9. **Vault** (top bar): add a document; it is encrypted in this browser before upload, for the devices you choose.
+10. **Attack lab** (top bar): run all 16 attacks against a separate copy of the agent and see which defence stopped each. *How it was caught* opens a step-by-step trace: the attacker's input, every audit entry the run wrote, each policy decision (tier, code, reason) and where the defence fired.
 11. **Student money** (top bar): cost the student's monthly living money sent monthly or quarterly, and download an on-time payment record signed by the sandbox bank.
 12. **Agent, live** panel: every step and policy decision as it happens, the rule trace with sources, what the AI saw (masked) and the audit chain.
 13. Sign in as a **Student** on an approved device: the student can upload the invoice, answer the questions and tap *Ask a parent to sign*. A signed-in parent then sees *Prepared by your student* and opens it on their own device to sign. A student can never sign or pay.
@@ -116,7 +116,7 @@ Details: [technical documentation](docs/TECHNICAL.md) · [security self-assessme
 - **Optional hosted model:** the `anthropic` Python SDK (MIT licence) is used only if you set `TUITIONPILOT_MODEL=claude`; the app never needs it.
 - **Sample PDFs only:** `data/invoices/make_invoices.py` uses ReportLab (BSD licence) to generate the synthetic PDF invoices. The app does not need it.
 - **Web fonts:** the app serves Fraunces and Manrope from `app/static/fonts/` (both SIL Open Font License 1.1; licence texts alongside). No fonts are loaded from other sites.
-- **Deck only:** the slides use the Source Serif 4 and IBM Plex Sans fonts (SIL Open Font License) from Google Fonts.
+- **Deck:** the PowerPoint deck uses Cambria and Calibri, which ship with Microsoft Office.
 - **CI:** the GitHub Actions workflow uses `actions/checkout` and `actions/setup-python` (both MIT). They run only on GitHub and are not part of the app.
 - **Ed25519** in `security/ed25519.py` is our own implementation of the algorithm published in RFC 8032 (IETF Trust; code components of RFCs are under the Simplified BSD License).
 - **No code** was copied from other teams.

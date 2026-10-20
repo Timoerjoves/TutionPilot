@@ -1,8 +1,7 @@
 # Presentation (11 slides, about 9 minutes; the official limit is 10 minutes)
 
 - **For the judges:** [TuitionPilot_deck.pptx](TuitionPilot_deck.pptx) (PowerPoint, with speaker notes on every slide) and [TuitionPilot_deck.pdf](TuitionPilot_deck.pdf) (same deck as PDF). Built 18 Oct 2026 (evidence numbers updated 19 Oct); fonts are Cambria and Calibri, which ship with Office.
-- **Architecture diagram used on slide 4:** [../architecture.svg](../architecture.svg) / [../architecture.png](../architecture.png).
-- **Web version (9 slides, 18 Oct):** the live deck at https://claude.ai/artifact/E9FusU8285LxbRy6PXmtm6 (private, Chandan's account), its PDF export [TuitionPilot_web_deck.pdf](TuitionPilot_web_deck.pdf), and its slide sources with speaker notes in `slides/`. Its slide 7 ("Built for families: sign-in, vault, next action") covers what this deck spreads over slides 3 and 8.
+- **Architecture diagram used on slide 5:** [../architecture.svg](../architecture.svg) / [../architecture.png](../architecture.png).
 
 | # | Slide | Time | Key message |
 |---|---|---|---|

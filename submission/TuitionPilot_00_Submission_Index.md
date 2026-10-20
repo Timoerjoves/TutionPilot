@@ -15,7 +15,7 @@ sandbox bank only after a parent's own device signs the exact plan.
 |---|---|---|---|
 | 01 | Technical documentation | Mandatory | [TuitionPilot_01_Technical_Documentation.pdf](TuitionPilot_01_Technical_Documentation.pdf) |
 | 02 | Presentation deck (designed for 10 minutes; 11 slides, about 9 minutes) | Mandatory | [TuitionPilot_02_Presentation_Deck.pdf](TuitionPilot_02_Presentation_Deck.pdf) · [TuitionPilot_02_Presentation_Deck.pptx](TuitionPilot_02_Presentation_Deck.pptx) |
-| 03 | Demo video (up to 5 minutes) | Optional | Link to be added |
+| 03 | Demo video (up to 5 minutes) | Optional | [Watch the demo video](https://drive.google.com/file/d/1fHZ_CLmVwT3-i_xDXy14E2ADuA9uPnxF/view?usp=sharing) |
 | 04 | Source code with README and GitHub link | Optional | Repository: [https://github.com/Timoerjoves/TutionPilot](https://github.com/Timoerjoves/TutionPilot) · [TuitionPilot_04_README.pdf](TuitionPilot_04_README.pdf) · [Download all code as ZIP](https://github.com/Timoerjoves/TutionPilot/archive/refs/heads/main.zip) |
 | 05 | Security self-assessment report | Optional | [TuitionPilot_05_Security_Self_Assessment.pdf](TuitionPilot_05_Security_Self_Assessment.pdf) |
 | 06 | Execution evidence | Optional | [TuitionPilot_06_Execution_Evidence_Summary.pdf](TuitionPilot_06_Execution_Evidence_Summary.pdf) · [TuitionPilot_06_Execution_Evidence.zip](TuitionPilot_06_Execution_Evidence.zip) (sandbox ledger, hash-chained audit log, what-the-model-saw log, scenario results) |
